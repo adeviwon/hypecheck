@@ -4,7 +4,9 @@ import glob, os, json
 import numpy as np, pandas as pd
 from scipy.stats import mannwhitneyu, ttest_ind
 
-ROOT="/home/ubuntu/Projects/hypecheck"
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
 M=pd.read_csv(f"{ROOT}/data/memecoin-hype-dataset.csv")
 M["available_at"]=pd.to_datetime(M.available_at); M["avail_day"]=pd.to_datetime(M.avail_day)
 posts=pd.read_parquet(f"{ROOT}/data/posts.parquet")[["tweet_id","user_name"]]
@@ -39,7 +41,7 @@ for r in M.itertuples():
     for h in HORIZONS:
         rec[f"fwd_{h}m"]=d.close.iloc[idx+h]/base-1.0
     # placebo: a uniformly random minute in the same day, same forward computation
-    j=int(np.random.default_rng(abs(hash(r.tweet_id))%2**32).integers(0, len(d)-max(HORIZONS)-1))
+    j=int(np.random.default_rng(int.from_bytes(hashlib.sha256(str(r.tweet_id).encode()).digest()[:4], "big")).integers(0, len(d)-max(HORIZONS)-1))
     rec["pl_own_move"]=d.close.iloc[j]/d.open.iloc[j]-1.0
     for h in HORIZONS:
         rec[f"pl_fwd_{h}m"]=d.close.iloc[j+h]/d.close.iloc[j]-1.0

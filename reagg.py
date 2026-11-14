@@ -6,11 +6,14 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, roc_auc_score
 from scipy import stats
-ROOT="/home/ubuntu/Projects/hypecheck"
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
 M=pd.read_csv(f"{ROOT}/data/memecoin-hype-dataset.csv"); M["tweet_id"]=M.tweet_id.astype(str)
 L=pd.read_csv("/tmp/learned_hype.csv"); L["tweet_id"]=L.tweet_id.astype(str)
 M["avail_day"]=pd.to_datetime(M.avail_day); M["trading_day"]=pd.to_datetime(M.trading_day)
-M=M.merge(L, on="tweet_id", how="left")
+M = M.drop(columns=["dir", "conf", "hype_v2"], errors="ignore")
+M = M.merge(L, on="tweet_id", how="left", validate="many_to_one")
 print(f"rows {len(M):,}  learned-meter coverage {M.hype_v2.notna().mean():.1%}")
 M["hype_lexicon"]=M["hype"] if "hype" in M.columns else np.nan
 M["hype_final"]=M.hype_v2.fillna(M.get("hype_lexicon", 0)).fillna(0)

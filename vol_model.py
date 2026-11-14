@@ -1,80 +1,79 @@
-import os
-import numpy as np, pandas as pd
-from sklearn.linear_model import Ridge, LogisticRegression
-from sklearn.ensemble import GradientBoostingRegressor
+"""Compare next-day price range forecasts on the complete five-coin panel."""
+
+import argparse
+import json
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from scipy.stats import spearmanr
+from sklearn.linear_model import Ridge
+from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score
-from scipy import stats
-ROOT="/home/ubuntu/Projects/hypecheck"
-M=pd.read_csv(f"{ROOT}/data/memecoin-hype-dataset.csv"); M["avail_day"]=pd.to_datetime(M.avail_day)
-H="hype_final" if "hype_final" in M.columns else "hype"
-M["hype_abs"]=M[H].abs()
-A=M.groupby(["coin","avail_day"]).agg(n_tweets=(H,"size"), hype_sum=(H,"sum"),
-      hype_abs_sum=("hype_abs","sum"), bull_share=(H, lambda s:float((s>0.05).mean()))).reset_index()
-A=A.sort_values(["coin","avail_day"])
-for w in (3,7):
-    A[f"hype_sum_{w}d"]=A.groupby("coin").hype_sum.rolling(w,min_periods=1).sum().reset_index(drop=True)
-    A[f"tweets_{w}d"]=A.groupby("coin").n_tweets.rolling(w,min_periods=1).sum().reset_index(drop=True)
-def px(c):
-    p=f"/tmp/meme-prices/{c}-prices.csv"
-    if not os.path.exists(p): return None
-    d=pd.read_csv(p, parse_dates=["date"]); d["day"]=d.date.dt.date
-    d["range_pct"]=(d.high-d.low)/d.open; d["abs_oc"]=(d.close/d.open-1).abs()
-    d["next_range"]=d.range_pct.shift(-1); d["next_up"]=(d.close.shift(-1)>d.open.shift(-1)).astype(float)
-    d.loc[d.next_range.isna(),"next_up"]=np.nan
-    return d.set_index("day")
-PX={c:px(c) for c in A.coin.unique()}
-rows=[]
-for r in A.itertuples():
-    d=PX.get(r.coin)
-    if d is None or r.avail_day.date() not in d.index: continue
-    b=d.loc[r.avail_day.date()]
-    if pd.isna(b.next_range): continue
-    rows.append(dict(coin=r.coin, day=r.avail_day.date(), n_tweets=r.n_tweets, hype_sum=r.hype_sum,
-        hype_abs_sum=r.hype_abs_sum, bull_share=r.bull_share, hype_sum_3d=r.hype_sum_3d,
-        tweets_3d=r.tweets_3d, hype_sum_7d=r.hype_sum_7d, tweets_7d=r.tweets_7d,
-        today_range=float(b.range_pct), today_abs=float(b.abs_oc),
-        y_range=float(b.next_range), y_dir=float(b.next_up)))
-D=pd.DataFrame(rows).sort_values("day").reset_index(drop=True)
-print(f"coin-days with a next-day target: {len(D):,}  {D.day.min()} -> {D.day.max()}")
-print(f"  next-day range: mean {D.y_range.mean():.4f} sd {D.y_range.std():.4f} | up-rate {D.y_dir.mean():.1%}")
-HF=["n_tweets","hype_sum","hype_abs_sum","bull_share","hype_sum_3d","tweets_3d","hype_sum_7d","tweets_7d"]
-CF=["today_range","today_abs"]; D[HF+CF]=D[HF+CF].fillna(0)
-def wf_reg(df, cols, target, model="ridge"):
-    qs=np.linspace(0.4,0.8,5); pred=np.full(len(df), np.nan)
-    for i in range(4):
-        a,b=int(len(df)*qs[i]),int(len(df)*qs[i+1]); tr,te=df.iloc[:a],df.iloc[a:b]
-        if len(te)<20 or len(tr)<50: continue
-        Xtr,Xte=tr[cols].to_numpy(float),te[cols].to_numpy(float)
-        sc=StandardScaler().fit(Xtr); Xtr,Xte=sc.transform(Xtr),sc.transform(Xte)
-        m=(Ridge(alpha=1.0) if model=="ridge" else GradientBoostingRegressor(random_state=0)).fit(Xtr,tr[target])
-        pred[df.index.get_indexer(te.index)]=m.predict(Xte)
-    return pred
-print("\n=== WALK-FORWARD: next-day VOLATILITY (daily range) from aggregate hype ===")
-for cols,lbl in [(HF,"hype only"),(CF,"context only"),(HF+CF,"hype + context")]:
-    p=wf_reg(D,cols,"y_range"); m=~np.isnan(p)
-    rho,pv=stats.spearmanr(D.y_range[m],p[m]); print(f"  {lbl:16s} n_oos={m.sum():4d}  Spearman {rho:+.4f}  p={pv:.2e} {'**' if pv<0.05 else ''}")
-print("\n=== CONTROLS on 'hype + context' ===")
-p=wf_reg(D,HF+CF,"y_range"); m=~np.isnan(p); real=stats.spearmanr(D.y_range[m],p[m])[0]
-rng=np.random.default_rng(0); nl=[]; pl=[]
-for _ in range(20):
-    Dp=D.copy(); Dp["y_range"]=rng.permutation(Dp.y_range.to_numpy())
-    nl.append(stats.spearmanr(Dp.y_range[m], wf_reg(Dp,HF+CF,"y_range")[m])[0])
-for _ in range(20):
-    Ds=D.copy()
-    for c in HF: Ds[c]=rng.permutation(Ds[c].to_numpy())
-    pl.append(stats.spearmanr(Ds.y_range[m], wf_reg(Ds,HF+CF,"y_range")[m])[0])
-nl=np.array(nl); pl=np.array(pl)
-print(f"  real {real:+.4f} | label-perm null {nl.mean():+.4f}+/-{nl.std():.4f} max {nl.max():+.4f} -> {'CLEARS' if real>nl.max() else 'does NOT clear'}")
-print(f"  hype-shuffle placebo {pl.mean():+.4f}+/-{pl.std():.4f} max {pl.max():+.4f} -> {'CLEARS' if real>pl.max() else 'does NOT clear'}")
-print("\n=== CONTRAST: same walk-forward on DIRECTION ===")
-qs=np.linspace(0.4,0.8,5); pred=np.full(len(D),np.nan)
-for i in range(4):
-    a,b=int(len(D)*qs[i]),int(len(D)*qs[i+1]); tr,te=D.iloc[:a],D.iloc[a:b]
-    if len(te)<20: continue
-    Xtr,Xte=tr[HF+CF].to_numpy(float),te[HF+CF].to_numpy(float)
-    sc=StandardScaler().fit(Xtr); Xtr,Xte=sc.transform(Xtr),sc.transform(Xte)
-    mdl=LogisticRegression(max_iter=3000).fit(Xtr,tr.y_dir); pred[D.index.get_indexer(te.index)]=mdl.predict(Xte)
-m=~np.isnan(pred); acc=accuracy_score(D.y_dir[m],pred[m]); base=max(D.y_dir[m].mean(),1-D.y_dir[m].mean())
-print(f"  n_oos={m.sum():4d}  acc {acc:.4f}  base {base:.4f}  edge {acc-base:+.4f}")
-D.to_csv("/tmp/vol_panel.csv", index=False); print("\nwrote /tmp/vol_panel.csv")
+
+from pipeline import ROOT, split_dates
+
+
+def date_block_interval(dates, delta):
+    series = pd.DataFrame({"date": dates, "delta": delta}).groupby("date").delta.mean().to_numpy()
+    rng = np.random.default_rng(42)
+    draws = []
+    for _ in range(1000):
+        starts = rng.integers(0, len(series), size=int(np.ceil(len(series) / 7)))
+        sample = np.concatenate([series[(start + np.arange(7)) % len(series)] for start in starts])[:len(series)]
+        draws.append(float(sample.mean()))
+    return {"delta": float(series.mean()), "interval95": np.quantile(draws, [0.025, 0.975]).tolist()}
+
+
+def evaluate_volatility(frame):
+    frame = frame.sort_values(["coin", "date"]).copy()
+    if frame.duplicated(["coin", "date"]).any():
+        raise ValueError("Duplicate coin-days")
+    frame["target_range"] = (frame.high - frame.low) / frame.open
+    frame["previous_range"] = frame.groupby("coin").target_range.shift(1)
+    for days in (3, 7):
+        frame[f"count_{days}d"] = frame.groupby("coin").post_count.transform(
+            lambda count: count.rolling(days, min_periods=days).sum()
+        )
+    if not frame.groupby("coin").date.diff().dropna().eq(pd.Timedelta(days=1)).all():
+        raise ValueError("Missing calendar days in the market panel")
+    train, _, test = split_dates(frame)
+    counts = ["post_count", "count_3d", "count_7d"]
+    market = ["previous_range", "vol7", "hourly_vol1"]
+    train = train.dropna(subset=market + counts)
+    actual = test.target_range.to_numpy()
+    predictions = {
+        "Training median": np.full(len(test), train.target_range.median()),
+        "Previous daily range": test.previous_range.to_numpy(),
+    }
+    for name, columns in (("Market only", market), ("Market + post count", market + counts)):
+        model = make_pipeline(StandardScaler(), Ridge(alpha=1.0))
+        model.fit(train[columns], train.target_range)
+        predictions[name] = model.predict(test[columns])
+    rows = {}
+    for name, predicted in predictions.items():
+        rho = spearmanr(actual, predicted).statistic if np.ptp(predicted) else None
+        rows[name] = {"mae": float(np.abs(actual - predicted).mean()),
+                      "spearman": None if rho is None else float(rho)}
+    delta = np.abs(actual - predictions["Market + post count"]) - np.abs(actual - predictions["Market only"])
+    return {
+        "target": "(high - low) / open during the UTC day after the feature window",
+        "test_coin_days": len(test),
+        "test_dates": [test.date.min().date().isoformat(), test.date.max().date().isoformat()],
+        "with_observed_posts": int(test.post_count.gt(0).sum()),
+        "metrics": rows,
+        "post_count_minus_market_mae": date_block_interval(test.date, delta),
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--features", type=Path, default=ROOT / "data/features.csv")
+    args = parser.parse_args()
+    frame = pd.read_csv(args.features)
+    frame["date"] = pd.to_datetime(frame.date, utc=True)
+    print(json.dumps(evaluate_volatility(frame), indent=2, allow_nan=False))
+
+
+if __name__ == "__main__":
+    main()

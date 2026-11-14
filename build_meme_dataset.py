@@ -1,8 +1,9 @@
 """Dataset: every tweet about a memecoin, its hype, how much the crowd hyped that coin that
 day, and whether the coin went up. Exclusions for symbol collisions are explicit."""
 import json, os, re
+from pathlib import Path
 import numpy as np, pandas as pd
-ROOT="/home/ubuntu/Projects/hypecheck"
+ROOT=Path(__file__).resolve().parent
 PRICES="/tmp/meme-prices"
 LEX=pd.read_csv(f"{ROOT}/data/hype-lexicon.csv")
 
@@ -66,11 +67,13 @@ M=pd.concat(rows, ignore_index=True)
 print(f"\nraw rows: {len(M):,}")
 
 # ---- per-tweet hype features ----
-low=M.text.str.lower()
-M["n_bull"]=low.apply(lambda s: sum(t in s for t in BULL))
-M["n_bear"]=low.apply(lambda s: sum(t in s for t in BEAR))
-M["n_hype"]=low.apply(lambda s: sum(t in s for t in HYPE))
-M["hype_meter"]=low.apply(lambda s: float(np.mean([HYPE[t] for t in HYPE if t in s])) if any(t in s for t in HYPE) else 0.0)
+low = M.text.str.casefold()
+patterns = {term: re.compile(rf"(?<!\w){re.escape(term)}(?!\w)") for term in set(BULL) | set(BEAR) | HYPE.keys()}
+M["n_bull"] = low.map(lambda text: sum(bool(patterns[term].search(text)) for term in BULL))
+M["n_bear"] = low.map(lambda text: sum(bool(patterns[term].search(text)) for term in BEAR))
+hype_values = low.map(lambda text: [value for term, value in HYPE.items() if patterns[term].search(text)])
+M["n_hype"] = hype_values.str.len()
+M["hype_meter"] = hype_values.map(lambda values: float(np.mean(values)) if values else 0.0)
 M["lex_net"]=M.n_bull-M.n_bear
 M["lex_hit"]=(M.n_bull+M.n_bear+M.n_hype>0).astype(int)
 M["len_chars"]=M.text.str.len()

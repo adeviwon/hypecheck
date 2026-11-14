@@ -1,10 +1,13 @@
 """The decay curve: what does a memecoin tweet do to price at 1m, 5m, 15m, 1h, 4h, 1d, 3d, 7d?
-Market-adjusted against BTC, with a same-day placebo at every horizon."""
+Market-adjusted against BTC, with a same-day placebo for intraday horizons."""
 import os
+import hashlib
 import numpy as np, pandas as pd
 from scipy import stats
 
-ROOT="/home/ubuntu/Projects/hypecheck"
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
 M=pd.read_csv(f"{ROOT}/data/memecoin-hype-dataset.csv")
 M["available_at"]=pd.to_datetime(M.available_at); M["avail_day"]=pd.to_datetime(M.avail_day)
 M["call"]=np.sign(M.lex_net).astype(int)
@@ -52,13 +55,18 @@ for r in M.itertuples():
         if not np.isfinite(rb): continue
         rec[f"r_{h}d"]=rc; rec[f"a_{h}d"]=(1+rc)/(1+rb)-1.0
     # placebo: same computation from a random minute of the same day
-    rng=np.random.default_rng(abs(hash(str(r.tweet_id)))%2**32)
-    p=int(rng.integers(0, len(ci)-max(INTRA)-1))
-    q=int(rng.integers(0, len(bi)-max(INTRA)-1))
-    for h in INTRA:
-        rc=ci.close.iloc[p+h]/ci.close.iloc[p]-1.0
-        rb=bi.close.iloc[q+h]/bi.close.iloc[q]-1.0
-        rec[f"pa_{h}m"]=(1+rc)/(1+rb)-1.0
+    rng=np.random.default_rng(int.from_bytes(hashlib.sha256(str(r.tweet_id).encode()).digest()[:4], "big"))
+    paired = ci.set_index("t").close.rename("coin").to_frame().join(
+        bi.set_index("t").close.rename("btc"), how="inner"
+    )
+    if len(paired) > max(INTRA):
+        p = int(rng.integers(0, len(paired) - max(INTRA)))
+        for h in INTRA:
+            if paired.index[p + h] - paired.index[p] != pd.Timedelta(minutes=h):
+                continue
+            rc = paired.coin.iloc[p+h] / paired.coin.iloc[p]
+            rb = paired.btc.iloc[p+h] / paired.btc.iloc[p]
+            rec[f"pa_{h}m"] = rc / rb - 1.0
     rows.append(rec)
 E=pd.DataFrame(rows); E.to_csv("/tmp/decay_curve.csv", index=False)
 print(f"decay curve built on {len(E):,} tweets (market-adjusted vs BTC)\n")

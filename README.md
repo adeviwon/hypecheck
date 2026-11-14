@@ -28,6 +28,14 @@ The primary comparison is market + X against market-only, not the best of many e
 
 Training prevalence is the fair constant-probability baseline. The hard majority forecast is retained for accuracy, not used to claim calibration. Same-day correlations do not establish that posts cause price changes. No profitability or durable trading-edge claim is made.
 
+## Follow-up checks
+
+The replay opens on October 10, 2026 for DOGE, when adding the X features lowered the estimated up probability from 46.8% to 32.9%. DOGE rose 0.45%. The archive contains three eligible posts for this example.
+
+A complete-calendar volatility recheck found mean absolute error of 2.678 percentage points for yesterday’s range, 2.757 for the market model, and 2.753 for market plus post count. The paired interval for adding count spans zero. Run `python vol_model.py` from the checkout to reproduce it. [Exploratory analyses](research/README.md)
+
+The published “Previous direction” baseline uses the prior close-to-close change. The forecast target uses the next open-to-close change. Using the prior open-to-close direction for persistence gives 49.33% on the same dates.
+
 ## Reproduce (Python 3.12)
 The self-contained Colab downloads and hash-checks all inputs, scores pinned FinTwitBERT, trains the models and runs tests. No paid API or project credentials.
 

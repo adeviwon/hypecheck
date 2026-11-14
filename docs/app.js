@@ -183,7 +183,7 @@
     const previous = $('date').value;
     $('date').replaceChildren(...selectedRows().map(row => { const option = node('option', row.date); option.value = row.date; return option; }));
     if (selectedRows().some(row => row.date === previous)) $('date').value = previous;
-    else { const firstObserved = selectedRows().find(row => row.post_count > 0); if (firstObserved) $('date').value = firstObserved.date; }
+    else { const example = selectedRows().find(row => row.coin === 'DOGE' && row.date === '2026-10-10'); const firstObserved = selectedRows().find(row => row.post_count > 0); if (example || firstObserved) $('date').value = (example || firstObserved).date; }
     $('reveal').checked = false;
     renderReplay();
   }
