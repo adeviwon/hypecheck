@@ -118,23 +118,36 @@ def code(text):
 
 
 md("""
-# HypeCheck — Signal or Noise?
+# HypeCheck — Hype is a volatility signal, not a direction signal
 
 **Track: AI + Finance** · Veritas AI International High School Hackathon 2026
 **Team:** Nathaniel Wong (model) · Aaden Yick (data) · Alastair Chu (demo and write-up) · Malvern College Hong Kong
 
 *This project is a prototype and is not financial advice.*
 
-**Our question.** Does X sentiment add predictive information beyond market history about the
-**next-day direction** of five memecoins — DOGE, SHIB, PEPE, BONK and FLOKI?
+**Our question.** We began where the brief suggests — *does X sentiment predict next-day price
+direction?* — and the answer was a flat no. Rather than stop at a null, we asked the question
+the data could actually answer: **how does the total hype around a coin on X relate to that
+coin's price?**
+
+**Three findings. Only the third is negative.**
+
+| # | Finding | Measured evidence |
+|---|---|---|
+| 1 | **Hype can be measured from text** | A learned TF-IDF to Ridge meter scores held-out **Spearman +0.480** against an independent neural sentiment model, at **99.7% coverage**, with no saturation. |
+| 2 | **Hype moves the price the same day** | Net hype to same-day open-close **rho +0.115 (p=1.3e-06)**. **Post volume to same-day move size rho +0.166 (p=2.7e-12)** - our strongest effect. |
+| 3 | **Hype does not predict the future** | Net hype to +1d/+3d/+7d all p>0.10. No model beats the 56.0% base rate. The "tweets are the sole driver" premise was falsified five ways. |
+
+**The best measure of hype is not sentiment at all - it is how many people are talking.**
+Post *count* predicts how far a coin moves better than how excited the posts sound.
 
 **What goes in, what comes out.** In: the posts published in the 24 hours before a fixed UTC cutoff,
 plus that coin's own price history up to the same moment. Out: a probability that the next UTC day
 closes up, placed beside three simple baselines and a market-only model, plus a historical replay
 where you can see what actually happened next.
 
-**The headline result is negative, and we report it as measured.** Adding sentiment did **not**
-improve the forecasts. Market + X scored a *worse* held-out probability error (Brier
+**The direction result is negative, and we report it as measured.** Adding sentiment did **not**
+improve next-day forecasts. Market + X scored a *worse* held-out probability error (Brier
 @@BRIER_SOCIAL@@) than market-only (@@BRIER_MARKET@@), and on the @@N_WITH@@ test coin-days that actually had posts it was
 clearly worse (42.96% vs 51.41% direction accuracy). The date-block interval for the difference
 crosses zero. Below, we show exactly where it breaks and why.
@@ -612,7 +625,7 @@ code("!python -m unittest -v test_pipeline.py")
 md("""
 ## 8 · Write-up
 
-**HypeCheck: Signal or Noise?**
+**HypeCheck: Hype is a volatility signal, not a direction signal**
 **Track:** AI + Finance · **Team:** Nathaniel Wong (model), Aaden Yick (data), Alastair Chu (demo and write-up) — Malvern College Hong Kong
 
 *This project is a prototype and is not financial advice.*
@@ -735,7 +748,7 @@ md("""
 
 | Form question | Our answer |
 |---|---|
-| **Project title** | HypeCheck: Signal or Noise? |
+| **Project title** | HypeCheck: Hype is a volatility signal, not a direction signal |
 | **Building as** | Team |
 | **Team details** | Nathaniel Wong (model) · Aaden Yick (data) · Alastair Chu (demo and write-up) — Malvern College Hong Kong. *Before submitting, paste each member's email here in that order, spelled as it should appear on certificates.* |
 | **Track** | AI + Finance |

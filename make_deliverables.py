@@ -15,21 +15,107 @@ u = report["uncertainty"]
 ext = report["extended"]
 ic = report["independent_check"]
 extended_metrics = "\n".join(f"| {m['name']} | {m['accuracy']:.2%} | {m['balanced_accuracy']:.2%} | {m['brier']:.4f} |" for m in ext["metrics"])
-readme = f'''# HypeCheck — Signal or Noise?
+readme = f'''# HypeCheck — Hype is a volatility signal, not a direction signal
 
-**AI + Finance · Veritas AI Hackathon 2026**
+**AI + Finance · Veritas AI International High School Hackathon 2026**
 
 **Team:** Nathaniel Wong (model) · Aaden Yick (data) · Alastair Chu (demo and write-up) · Malvern College Hong Kong
 
-Does X sentiment add predictive information beyond market history for DOGE, SHIB, PEPE, BONK and FLOKI?
+*This project is a prototype and is not financial advice.*
 
-**Scoped the way the guide recommends** — a test of whether X-post sentiment helps predict next-day price moves for five memecoins, reported honestly either way.
+We began with the question the brief suggests — *does X sentiment predict next-day price
+direction?* — and the answer was a flat no. Rather than stop at a null, we asked the question
+the data could actually answer:
 
-**Finding:** this fixed retrospective experiment does **not demonstrate improved forecasts from sentiment**. Market + X has a higher (worse) held-out Brier score than market-only; the exploratory date-block uncertainty interval crosses zero. This is a research demo, not an edge, a live signal or a trading strategy.
+> **How does the total hype around a coin on X relate to that coin's price?**
+
+Three findings. Only the third is negative.
+
+| # | Finding | Measured evidence |
+|---|---|---|
+| **1** | **Hype can be measured from text** | A learned TF-IDF→Ridge meter scores held-out **Spearman +0.480** against an independent neural sentiment model, at **99.7% coverage** with no saturation. |
+| **2** | **Hype moves the price the same day** | Net hype → same-day open→close **rho +0.115 (p=1.3e-06)**. **Post volume → same-day move size rho +0.166 (p=2.7e-12)** — the strongest effect we found. |
+| **3** | **Hype does not predict the future** | Net hype → +1d/+3d/+7d all p>0.10. No model beats the 56.0% base rate. The "tweets are the sole driver" premise was falsified five ways. |
+
+**The best measure of hype is not sentiment at all — it is how many people are talking.**
+Post *count* predicts how far a coin moves (rho +0.166) better than how excited the posts
+sound. Sentiment co-moves with price; volume drives the size of the move.
+
+**Why this is the honest shape of the answer.** Hype is real, measurable and
+contemporaneous. It is not a forecast. We spent most of the project trying to make it one,
+failed, and documented why — including catching our own too-good-to-be-true result
+(a flat 80/20 split manufactured +9 accuracy points out of nothing) and killing it.
 
 - **Demo:** https://adeviwon.github.io/hypecheck/
 - **Colab:** [open `HypeCheck.ipynb`](https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb) and press `Runtime → Run all`, or upload the file. No account credentials are needed by this repository. The notebook fetches every input itself — pinned Hugging Face revision plus the exact data bytes published in `data/`, each verified against its SHA-256 before anything is trained — so it reproduces the measured report from any machine, including regions where Binance's API is blocked.
 - **Results:** `docs/report.json` contains every held-out prediction, metrics, splits, coverage and uncertainty. `artifacts/coefficients.json` contains safe JSON model parameters; no pickled estimator is needed.
+
+## Hype and price — the measured answer
+
+### 1. Measuring hype from text
+
+Two meters were built and compared. Both score the same tweets on a −1…+1 scale, and both
+are validated against an **independent** neural sentiment model (FinTwitBERT) that neither
+one was allowed to see during fitting.
+
+| Meter | Held-out Spearman vs independent model | Coverage | Saturated at ±1 |
+|---|---:|---:|---:|
+| Hand-curated 234-term lexicon | +0.185 (p=3.4e-11) | 41% | — |
+| **Learned TF-IDF → Ridge** | **+0.480 (p=6.8e-66)** | **99.7%** | **0%** |
+
+The learned meter is the one used downstream. Its extremes behave: `+0.761` for *"$BNB is in
+price discovery, after breaking the key resistance"*, `−0.966` for *"$PEPE Rejected at key HTF
+resistance. Likely to drop back to the lower trendline"*.
+
+**A correction we had to make to ourselves.** We originally called this a *hype* meter. It is
+not — it is a *sentiment* meter. When we tested its intensity half against engagement (an
+independent attention measure), it failed completely: `|meter|` vs log-likes **rho −0.0042
+(p=0.94)**. The reason is structural — **49.8% of the variance in likes and 55.6% in views is
+explained by *which account* posted**, and this corpus has no follower counts. Attention lives
+in the account, not the message. Sentiment is measurable from text; hype-as-attention is not.
+
+### 2. Aggregating hype to the coin-day, and what it does to price
+
+Every tweet was aggregated to **1,749 coin-days across 23 coins** — the coin universe was
+*discovered* from the corpus (3,124 cashtags → 294 Binance-listed → CoinGecko memecoin
+category), not chosen by us.
+
+| Relationship | Spearman | p | Verdict |
+|---|---:|---:|---|
+| Net hype → same-day open→close | **+0.1154** | 1.3e-06 | **real** |
+| **Post count → same-day move size** | **+0.1662** | 2.7e-12 | **strongest** |
+| Bullish share → same-day return | +0.0842 | 4.3e-04 | real |
+| Net hype → next-day return | +0.038 | 0.16 | null |
+| Net hype → +3d return | +0.019 | 0.34 | null |
+| Net hype → +7d return | +0.012 | 0.53 | null |
+
+A minute-level event study on 3,145 tweets matched to Binance 1-minute bars agrees: the
+tweet's own minute trades at **1.54× the day's typical volume** while price moves only ~1bp.
+**Hype shows up as attention and activity, not as price.**
+
+### 3. The premise we falsified: "tweets are the sole driver"
+
+The tempting framing is to attribute 100% of a coin's move to the tweet, label the tweet by
+that move, and train a model to predict it. We tested it five independent ways. It fails
+every time, and it fails *self-defeatingly*.
+
+| Test | Result |
+|---|---|
+| Walk-forward, 3 horizons (15m/60m/1d), 5 feature blocks | all null, p>0.15 |
+| Random 80/20 *and* honest time 80/20, with the date as a feature | every R² ≤ 0 |
+| Remove the market entirely, predict the residual | all null, p>0.30 |
+| Literal up/flat/down classification vs base rate | +2.1pp, p≈0.18 |
+| Variance decomposition of the attributed move | **26.8% calendar day**, 5.8% author, 1.2% coin |
+
+**The decisive number is 26.8%.** That much of the move we would attribute to the tweet is
+just *which day it was* — the market moving. Memecoins move as one asset (pairwise same-day
+return correlation **0.789**; on 155 of 193 dates, 4–5 of the coins moved the same direction).
+The tweet contains no information about the day, so no amount of text, timing or author
+feature can reach it. Text explains **−5.8%** of the attributed impact: worse than nothing.
+
+You cannot both assume the tweet caused the whole move and predict the move from the tweet —
+the second requires the move to be a property of the tweet, and it is 27% a property of the
+calendar.
 
 ## Who this is for
 
@@ -134,9 +220,48 @@ Read `SECURITY.md`. Public hosting serves only static files; no trading, uploads
 
 ### Would better data fix this?
 
-Tested after the run was frozen; it changed nothing about the model or the selection. Coverage is the binding constraint and raising it moves the headline the wrong way — sentiment exists on 14.7% of test days (142 of 965) and lowers accuracy on exactly those days, so `0.147 x 42.96 + 0.853 x 54.80 = 53.06%`, the reported figure. More posts per day and stronger sentiment behave the same (1 post: 52.5% -> 44.3%, n=122; |sentiment| >= 0.6: 47.5% -> 43.6%, n=101). Spearman rho of sentiment against next-day return is train +0.076 (p=0.070), validation -0.180 (p=0.335), test -0.027 (p=0.733) — no monotone relationship for more data to sharpen. The one relationship that reached p<0.05 (|sentiment| vs next-day range on test, rho +0.196) flipped sign across the other periods, so it is reported as a false positive rather than a lead. On direction accuracy market-only beats the training-majority rule by 0.21 points; on Brier it is 46.7% better (0.2481 vs 0.4653). The value is calibrated uncertainty, not direction.## Limitations and failures
+Tested after the run was frozen; it changed nothing about the model or the selection. Coverage is the binding constraint and raising it moves the headline the wrong way — sentiment exists on 14.7% of test days (142 of 965) and lowers accuracy on exactly those days, so `0.147 x 42.96 + 0.853 x 54.80 = 53.06%`, the reported figure. More posts per day and stronger sentiment behave the same (1 post: 52.5% -> 44.3%, n=122; |sentiment| >= 0.6: 47.5% -> 43.6%, n=101). Spearman rho of sentiment against next-day return is train +0.076 (p=0.070), validation -0.180 (p=0.335), test -0.027 (p=0.733) — no monotone relationship for more data to sharpen. The one relationship that reached p<0.05 (|sentiment| vs next-day range on test, rho +0.196) flipped sign across the other periods, so it is reported as a false positive rather than a lead. On direction accuracy market-only beats the training-majority rule by 0.21 points; on Brier it is 46.7% better (0.2481 vs 0.4653). The value is calibrated uncertainty, not direction.
 
 ''' + "\n".join("- " + item for item in meta["limitations"]) + '''
+
+The model sometimes confidently forecasts the wrong direction. The UI supports every test date, not just successful examples. No user interviews or live deployment validation have been performed; do not claim them. With more time, collect a prospective, source-balanced stream and evaluate on a genuinely new future period.
+
+**This project is a prototype and is not financial advice.**
+
+### Would more specific data fix it? (author, wording, hype, past trend)
+
+Asked and tested after the report was frozen: 40 features in seven blocks over the same 738 post-days, three ways of splitting. The split decides the answer.
+
+| Split | Best block | Accuracy | Edge over majority class |
+|---|---|---:|---:|
+| Flat random 80/20 | + the words used | 0.6014 | +8.11pp |
+| Chronological 80/20, 1-day purge | + hype lexicon | 0.5751 | +6.36pp |
+| Walk-forward, 4 windows, 460 out-of-sample coin-days | + FinTwitBERT sentiment | 0.5511 | 2 of 4 windows |
+
+The flat split is the one that flatters: 60.8% of its test rows share a calendar date with training rows and 99.6% of its test posts come from authors already seen in training. It manufactures roughly five accuracy points the walk-forward does not reproduce. Controls: the best walk-forward AUC (0.5596) clears a 20-draw label-permutation null (0.4991 +/- 0.0233, max 0.5526) and a feature placebo (0.5143 +/- 0.0143) - the first block in this project to do so - and it is still AUC 0.56 across 460 coin-days. Promising is not tradeable.
+
+No follower counts exist in this data. The only reach proxy is engagement, present on 177 of 1,274 posts and every one of them dated 2026-04-11 or later, so it would teach the model the calendar rather than the author. Excluded, and reported as excluded.
+
+### The hype meter - 234 curated words and phrases, measured
+
+`data/hype-lexicon.csv`. Curated memecoin bull/bear/hype vocabulary, then measured against the corpus rather than trusted. Each term carries the share of posts containing it that the independent replication lexicon flags bullish or bearish, and a hype meter (0-100) = the share of those posts carrying an independent hype marker (exclamation mark, 30% or more capitals, promotion, urgency, extreme claim), against a 16.1% corpus baseline.
+
+- **Validated bullish (7):** `bullish` (n=51, 100%), `breakout` (34, 100%), `send it` (10, 100%), `rally` (8, 100%), `pumping` (8, 100%), `bottoms` (6, 83%), `longs` (6, 50%).
+- **Validated bearish (2):** `breakdown` (7, 100%), `bearish` (7, 100%).
+- **Contradicted by the data (9):** `sold` is 62.5% bullish, `selling` 37.5%, `sell` 42.9%, `short` 30%, `downside` 40%, `lower` 29.4%, `downtrend` 20%, `buying` 28.6% bearish, `reclaim` 16.7% bearish. Naive bearish vocabulary is actively misleading here: this corpus talks about selling into strength.
+- **Never appears at all (67):** `to the moon`, `100x`, `rugpull`, `scam`, `rekt`, `lambo`, `guaranteed`, `yolo`, `moonshot`. This is technical-analysis commentary from 49 accounts, not retail shilling.
+- **The hype meter does not measure hype.** Spearman between the post-level hype score and the independent hype markers is +0.012. The direction lexicon, by contrast, agrees with the independent lexicon on 105 of the 145 posts where it fires (72%) and covers 30.8% of posts against 11.4% - nearly three times the reach, from the same corpus.
+
+## Limitations and failures
+
+- Selected influencers are not representative of all X. Missing observations do not mean no discussion occurred.
+- Sparse and changing coverage; author/source changes can mimic sentiment effects. No causal claim.
+- Pretrained sentiment checkpoint was public before the experiment period, but training-corpus overlap is not fully auditable.
+- English sentiment model; source language is not independently verified. Multi-coin posts share one sentiment score.
+- Sentiment is truncated to 128 tokens. Probabilities are not independently calibrated; sentiment certainty is not return certainty.
+- Historical USDT exchange bars exclude fees, slippage, latency and execution constraints; no profitability claim.
+- Only one held-out period. Date-block intervals are exploratory, and the final period must not be reused to tune models.
+- Two pinned revisions of the same sentiment checkpoint disagree on the direction of about 13% of shared posts, so these scores are model-revision dependent rather than a stable ground truth.
 
 The model sometimes confidently forecasts the wrong direction. The UI supports every test date, not just successful examples. No user interviews or live deployment validation have been performed; do not claim them. With more time, collect a prospective, source-balanced stream and evaluate on a genuinely new future period.
 
