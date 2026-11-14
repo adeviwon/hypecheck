@@ -28,9 +28,11 @@ REPORT = json.loads((ROOT / "docs/report.json").read_text())
 M = {row["name"]: row for row in REPORT["metrics"]}
 PIPELINE = (ROOT / "pipeline.py").read_text()
 TESTS = (ROOT / "test_pipeline.py").read_text()
+POSTMODEL = (ROOT / "postmodel.py").read_text()
 
 FILES = ("posts.parquet", "market-hourly.csv", "expanded-daily.csv", "independent-post-scores.csv",
-         "DOGE-prices.csv", "SHIB-prices.csv", "PEPE-prices.csv", "BONK-prices.csv", "FLOKI-prices.csv")
+         "DOGE-prices.csv", "SHIB-prices.csv", "PEPE-prices.csv", "BONK-prices.csv", "FLOKI-prices.csv",
+         "post-features-anon.csv")
 SHA = {name: digest(ROOT / "data" / name) for name in FILES}
 SIZE = {name: (ROOT / "data" / name).stat().st_size for name in FILES}
 
@@ -462,7 +464,68 @@ print("\\nThe model is also right for the wrong reason: daily prices are persist
 """)
 
 md("""
-## 6 · Verification — the checks we ran against ourselves
+## 6 · The richer post-level model — who said it, how they said it, and why the 80/20 flatters it
+
+Section 4 asks whether sentiment predicts direction. This section asks the question a judge should ask
+next: **does more specific data help?** We rebuild the model on 34 features in six blocks.
+
+| Block | Features | n |
+|---|---|---|
+| Market | prior-day return 1/3/7, realised volatility, range, volume change | 6 |
+| Past trend | trailing 10- and 30-day up-rate, trailing 10-day mean return | 3 |
+| BTC and intraday | BTC prior-day 1/7, hourly volatility, hourly range, last-hour return, taker ratio | 6 |
+| Post volume | posts per coin-day, log posts, distinct authors, top-author share | 4 |
+| **The words used** | bullish, bearish, urgency, extreme claim, promotion, evidence, uncertainty, exclamations, external link, polarity, word count, CAPS share | 12 |
+| **Who posted it** | author known, prior-30-day post count, prior-30-day active days | 3 |
+
+Two limits, stated up front rather than buried, because each one costs a feature a judge might expect:
+
+- **This data contains no follower counts.** The only reach proxy is engagement — views, likes, replies,
+  retweets — and it exists on 177 of 1,274 posts, every one of them dated 2026-04-11 or later. Feeding it
+  to the model would teach it *this row is from 2026*, not *this author is loud*. We exclude it, and the
+  notebook prints that coverage so the exclusion is checkable rather than claimed.
+- **64% of posts carry no author identity at all.** Author behaviour is therefore measured only where it
+  exists, and flagged with `author_known`, so the learner can separate *no known author* from *an author
+  with a zero*. The published table is anonymised: author keys are renumbered `author_001`, and post text,
+  handles, display names, tweet IDs and per-person engagement are dropped before publication.
+
+Then three splits, because here **the split decides the answer**:
+
+| Split | Definition | What it hides |
+|---|---|---|
+| A | flat random 80/20 | 60.8% of its test rows share a calendar date with train, and 99.6% of its test posts come from authors already in train |
+| B | chronological 80/20, 1-day purge | nothing — train on the past, test on the future |
+| C | walk-forward, 6 date blocks | nothing — 4 forward windows, refit each time, 460 out-of-sample coin-days |
+
+Two controls decide whether any gain is real: **label permutation** (destroy the training labels, keep
+everything else) and a **feature placebo** (shuffle the post columns across rows, keep the labels).
+
+Measured by the next two cells:
+
+| Split | Best block | Accuracy | Edge over majority class | AUC |
+|---|---|---|---|---|
+| A — flat 80/20 (leaky) | + FinTwitBERT sentiment | 0.6104 | **+9.01pp** | 0.6295 |
+| B — chronological 80/20 | + FinTwitBERT sentiment | 0.5598 | +4.83pp | 0.5696 |
+| C — walk-forward | + author behaviour | 0.5285 | — | 0.5530 |
+
+The flat split is the one that would win a pitch, and it is the one that lies. **The best walk-forward
+result sits 8.2 accuracy points below the best flat-split result**, because in a walk-forward the test rows
+stop sharing dates and authors with training. In the honest split the richest model beats its own majority
+baseline in **1 of 4** forward windows, and its AUC does not clear the label-permutation null printed by
+the control cell. Author behaviour adds the most of any single block (+2.5pp accuracy over the market-only
+model in the walk-forward, AUC 0.553 against 0.480) — and it is still not a durable edge.
+
+So the answer to *would more specific data help?* is the same as section 5's, arrived at a second way: not
+as measured. What the extra data does buy is a demonstration of how a flat 80/20 split manufactures a
+nine-point edge out of nothing, which is the failure mode this project exists to expose.
+""")
+
+code("%%writefile postmodel.py\n" + POSTMODEL)
+
+code("!python postmodel.py --data-dir data --json postmodel.json")
+
+md("""
+## 7 · Verification — the checks we ran against ourselves
 
 A result that survives in only one direction is worthless, so the repository ships runnable gates. The
 next two cells write `test_pipeline.py` and run it. These are adversarial tests, not decoration:
@@ -491,7 +554,7 @@ code("%%writefile test_pipeline.py\n" + TESTS)
 code("!python -m unittest -v test_pipeline.py")
 
 md("""
-## 7 · Write-up
+## 8 · Write-up
 
 **HypeCheck: Signal or Noise?**
 **Track:** AI + Finance · **Team:** Nathaniel Wong (model), Aaden Yick (data), Alastair Chu (demo and write-up) — Malvern College Hong Kong
@@ -612,7 +675,7 @@ is calibrated uncertainty, not direction, and the interface says so on its face.
 """)
 
 md("""
-## 8 · Submission form answers
+## 9 · Submission form answers
 
 | Form question | Our answer |
 |---|---|
@@ -624,17 +687,17 @@ md("""
 | **Scope, in the guide's format** | A test of whether X-post sentiment helps predict next-day price moves for five memecoins (DOGE, SHIB, PEPE, BONK, FLOKI), reported honestly either way. |
 | **One-sentence pitch** | HypeCheck takes a memecoin's X posts and its own price history and tells a beginner investor whether the hype carries any predictive signal at all — reporting honestly that, in our measured run, it does not. |
 | **Code link** | [This Colab notebook](@@COLAB@@) or the [repository](https://github.com/@@REPO@@) |
-| **Write-up** | Section 7 of this notebook, and the repository README |
+| **Write-up** | Section 8 of this notebook, and the repository README |
 | **Demo video link** | *optional — add the unlisted YouTube or Drive link* |
 | **What we added** | A different market (five memecoins, not the Dow) and source (X posts, not headlines); a frozen pretrained sentiment model with conservative availability alignment; an ablation from market-only → +attention → +sentiment; a pre-declared selection rule with purged partitions; a date-block uncertainty estimate; a second independent scoring pass; and a failure analysis of the confident misses. |
-| **Datasets, models and AI tools used** | HF `StephanAkkerman/financial-tweets-crypto`; HF `StephanAkkerman/FinTwitBERT-sentiment`; Binance public klines; scikit-learn, pandas, NumPy, PyArrow, Requests, PyTorch, Hugging Face Transformers, safetensors; Hermes Agent / OpenAI coding assistance. Full credits in section 9. |
+| **Datasets, models and AI tools used** | HF `StephanAkkerman/financial-tweets-crypto`; HF `StephanAkkerman/FinTwitBERT-sentiment`; Binance public klines; scikit-learn, pandas, NumPy, PyArrow, Requests, PyTorch, Hugging Face Transformers, safetensors; Hermes Agent / OpenAI coding assistance. Full credits in section 10. |
 | **New to AI?** | No — at least one of us has built with AI before |
 
 *Prototype, not financial advice. The results are the ones we actually measured, including the negative one.*
 """)
 
 md("""
-## 9 · Sources and credits
+## 10 · Sources and credits
 
 - **Dataset:** [StephanAkkerman/financial-tweets-crypto](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto) (MIT) — revision `@@DATASET_REV@@`, upstream LFS SHA-256 `@@POSTS_SHA@@`.
 - **Pretrained model:** [StephanAkkerman/FinTwitBERT-sentiment](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment) (MIT), Stephan Akkerman and Tim Koornstra. Reused, not our invention; the independent check uses revision `@@IND_REV@@`.
@@ -664,7 +727,7 @@ digests on every run.
 """)
 
 code("""
-# 10 · Take the results with you (optional; Colab only).
+# 11 · Take the results with you (optional; Colab only).
 if IN_COLAB:
     from google.colab import files
 
