@@ -1,6 +1,8 @@
 import numpy as np, pandas as pd
 from scipy import stats
-ROOT="/home/ubuntu/Projects/hypecheck"
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
 p=pd.read_parquet(f"{ROOT}/data/posts.parquet")[["tweet_id","likes","views","retweets","replies","user_name","text"]]
 p["tweet_id"]=p.tweet_id.astype(str); p=p.drop_duplicates("tweet_id")
 M=pd.read_csv(f"{ROOT}/data/memecoin-hype-dataset.csv"); M["tweet_id"]=M.tweet_id.astype(str)

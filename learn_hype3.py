@@ -4,7 +4,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import Ridge
 from sklearn.model_selection import KFold
 from scipy import stats
-ROOT="/home/ubuntu/Projects/hypecheck"
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
 posts=pd.read_parquet(f"{ROOT}/data/posts.parquet")[["tweet_id","text"]]
 posts["tweet_id"]=posts.tweet_id.astype(str); posts=posts.drop_duplicates("tweet_id")
 M=pd.read_csv(f"{ROOT}/data/memecoin-hype-dataset.csv"); M["tweet_id"]=M.tweet_id.astype(str)

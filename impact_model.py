@@ -3,7 +3,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
 from scipy import stats
-ROOT="/home/ubuntu/Projects/hypecheck"
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
 D=pd.read_csv("/tmp/decay_curve.csv")
 posts=pd.read_parquet(f"{ROOT}/data/posts.parquet")[["tweet_id","text","created_at","user_name"]]
 posts["tweet_id"]=posts.tweet_id.astype(str); posts=posts.drop_duplicates("tweet_id")
