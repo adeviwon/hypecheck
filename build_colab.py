@@ -216,6 +216,11 @@ fetch the published copies first, because Binance blocks some regions and some c
 submission that only runs in certain countries is not a submission. Either way the digests are
 verified before anything is trained.
 
+**Two ways to get the data.** The cell below downloads each pinned file from the repository and checks
+its SHA-256 before anything is trained. If you would rather not depend on that, drag the same files from
+the submission bundle into Colab's file browser (left sidebar) before running it: the cell accepts an
+uploaded copy when its digest matches the pinned digest, and refuses anything that does not.
+
 **Honest note on sizing.** Only **1,124** of the 104,379 posts survive our eligibility rules
 (original posts only, non-empty bounded text, an exact supported ticker, deduplicated, inside the
 fixed window). That is small, and we treat it as small everywhere below.
@@ -247,6 +252,12 @@ def fetch(name, url, expected, min_bytes=4096):
     dest = DATA / name
     if dest.exists() and sha256(dest) == expected:
         return dest, "already present"
+    # A copy the reader dragged into the Colab file browser is as good as one we download, provided the
+    # bytes are the pinned bytes. This keeps the notebook runnable even if the repository is unavailable.
+    for candidate in (ROOT / name,):
+        if candidate.exists() and candidate.resolve() != dest.resolve() and sha256(candidate) == expected:
+            dest.write_bytes(candidate.read_bytes())
+            return dest, 'used the uploaded copy'
     for attempt in range(3):
         try:
             response = requests.get(url, timeout=(10, 180))
@@ -732,9 +743,10 @@ md("""
 | **Scope, in the guide's format** | A test of whether X-post sentiment helps predict next-day price moves for five memecoins (DOGE, SHIB, PEPE, BONK, FLOKI), reported honestly either way. |
 | **One-sentence pitch** | HypeCheck takes a memecoin's X posts and its own price history and tells a beginner investor whether the hype carries any predictive signal at all — reporting honestly that, in our measured run, it does not. |
 | **Code link** | [This Colab notebook](@@COLAB@@) or the [repository](https://github.com/@@REPO@@) |
+| **Headline result** | **54.40%** accuracy against a **53.47%** base rate on 965 held-out coin-days — a +0.93 point edge. A richer 40-feature model reaches **60.14%** on a flat random 80/20 split, but 60.8% of that split's test rows share a calendar date with training rows and 99.6% of its test posts come from authors already seen in training; the same model walk-forward gives **55.11%** and beats its baseline in 2 of 4 windows. We report the split that survives, not the one that flatters. |
 | **Write-up** | Section 8 of this notebook, and the repository README |
 | **Demo video link** | *optional — add the unlisted YouTube or Drive link* |
-| **What we added** | A different market (five memecoins, not the Dow) and source (X posts, not headlines); a frozen pretrained sentiment model with conservative availability alignment; an ablation from market-only → +attention → +sentiment; a pre-declared selection rule with purged partitions; a date-block uncertainty estimate; a second independent scoring pass; and a failure analysis of the confident misses. |
+| **What we added** | A different market (five memecoins, not the Dow) and source (X posts, not headlines); a frozen pretrained sentiment model with conservative availability alignment; an ablation from market-only → +attention → +sentiment; a pre-declared selection rule with purged partitions; a date-block uncertainty estimate; a second independent scoring pass; a failure analysis of the confident misses; a 40-feature post-level model run across three split protocols that catches an ordinary random split manufacturing a 60.14% result and reports the honest walk-forward number instead; and a 234-term hype lexicon with a measured per-word hype meter. |
 | **Datasets, models and AI tools used** | HF `StephanAkkerman/financial-tweets-crypto`; HF `StephanAkkerman/FinTwitBERT-sentiment`; Binance public klines; scikit-learn, pandas, NumPy, PyArrow, Requests, PyTorch, Hugging Face Transformers, safetensors; Hermes Agent / OpenAI coding assistance. Full credits in section 10. |
 | **New to AI?** | No — at least one of us has built with AI before |
 
