@@ -1,7 +1,7 @@
 {
   "meta": {
     "project": "HypeCheck",
-    "generated_at": "2026-11-14T08:00:37.543001+00:00",
+    "generated_at": "2026-11-14T08:02:23.544479+00:00",
     "dataset": "StephanAkkerman/financial-tweets-crypto",
     "dataset_revision": "c4b17a94a667af3da1c9ed5144f998e3a4f29966",
     "sentiment_model": "StephanAkkerman/FinTwitBERT-sentiment",

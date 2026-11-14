@@ -15,7 +15,7 @@
     "data/market-hourly.csv": "d6819bf4ff46c31c88d62130904e858deb0191125b2603910755feeba8cce003",
     "data/posts.parquet": "81b2f7563a44c1a103e9468a83d52319dfeae0fc616422b4a4df90d8d684b960",
     "data/sentiment.json": "6d0384b26bf2c3b41c6eeb7e9b5973ac7186b85db903c266871e8067624c7415",
-    "docs/report.json": "ff9c214192aba9db4c59d73555857aea31a1c0751e80a7715e131e24df182991",
+    "docs/report.json": "6ad06c22c7380a143ac85ad2361846091be175263d3dae2876bccc149175d00c",
     "artifacts/coefficients.json": "b64771e37cc7f2f43c670e8d21fcf53725b7f283fa7b3f603da363a9e1f030de"
   }
 }

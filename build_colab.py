@@ -587,6 +587,7 @@ md("""
 
 - **Dataset:** [StephanAkkerman/financial-tweets-crypto](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto) (MIT) — revision `@@DATASET_REV@@`, upstream LFS SHA-256 `@@POSTS_SHA@@`.
 - **Pretrained model:** [StephanAkkerman/FinTwitBERT-sentiment](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment) (MIT), Stephan Akkerman and Tim Koornstra. Reused, not our invention; the independent check uses revision `@@IND_REV@@`.
+- **Hourly market bars and BTC context:** Binance Vision spot klines, supplied in an independent HypeCheck data package; attributed to Binance Vision under its dataset terms and CC BY-NC-SA 4.0. The daily rows were cross-checked bar-for-bar against our own Binance bars and matched exactly.
 - **Market data and field definitions:** [Binance spot API documentation](https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#klinecandlestick-data). Binance market data is not relicensed as our code.
 - **Libraries:** PyTorch, Hugging Face Transformers, safetensors, scikit-learn, pandas, NumPy, PyArrow, Requests — each keeps its own licence.
 - **Evaluation guidance:** [scikit-learn common pitfalls](https://scikit-learn.org/stable/common_pitfalls.html).

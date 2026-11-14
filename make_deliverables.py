@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parent
 report = json.loads((ROOT / "docs/report.json").read_text())
@@ -23,7 +24,7 @@ Does X sentiment add predictive information beyond market history for DOGE, SHIB
 **Finding:** this fixed retrospective experiment does **not demonstrate improved forecasts from sentiment**. Market + X has a higher (worse) held-out Brier score than market-only; the exploratory date-block uncertainty interval crosses zero. This is a research demo, not an edge, a live signal or a trading strategy.
 
 - **Demo:** https://adeviwon.github.io/hypecheck/
-- **Colab:** open `HypeCheck.ipynb` in Google Colab, or upload that file. No account credentials are needed by this repository.
+- **Colab:** [open `HypeCheck.ipynb`](https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb) and press `Runtime → Run all`, or upload the file. No account credentials are needed by this repository. The notebook fetches every input itself — pinned Hugging Face revision plus the exact data bytes published in `data/`, each verified against its SHA-256 before anything is trained — so it reproduces the measured report from any machine, including regions where Binance's API is blocked.
 - **Results:** `docs/report.json` contains every held-out prediction, metrics, splits, coverage and uncertainty. `artifacts/coefficients.json` contains safe JSON model parameters; no pickled estimator is needed.
 
 ## Who this is for
@@ -153,32 +154,6 @@ Code is MIT licensed. Third-party posts, model weights, market data and librarie
 freeze = subprocess.run(["uv", "pip", "freeze", "--python", str(ROOT / ".venv/bin/python")], capture_output=True, text=True, check=True).stdout
 (ROOT / "requirements.lock.txt").write_text("--extra-index-url https://download.pytorch.org/whl/cpu\n" + freeze)
 
-
-def md(source):
-    return {"cell_type": "markdown", "metadata": {}, "source": source.splitlines(True)}
-
-
-def code(source):
-    return {"cell_type": "code", "metadata": {}, "execution_count": None, "outputs": [], "source": source.splitlines(True)}
-
-notebook = {"nbformat": 4, "nbformat_minor": 5, "metadata": {
-    "colab": {"name": "HypeCheck.ipynb"}, "kernelspec": {"name": "python3", "display_name": "Python 3", "language": "python"},
-    "language_info": {"name": "python"}}, "cells": [
-    md("# HypeCheck — Signal or Noise?\n\n" + "Does X sentiment improve next-day direction forecasts for five memecoins beyond market history?\n\n" +
-       "**This is the complete CPU-capable experiment, not the earlier audit-only starter.** It downloads pinned public posts and a fixed historical price horizon, scores original posts with frozen FinTwitBERT, and evaluates logistic regressions on later unseen dates. No paid API or Google account credentials are needed.\n\n" +
-       "Keep the test period untouched: do not tune to improve the published test score. Our measured run did not demonstrate an advantage from sentiment. Read the code and methods before presenting.\n\nThis project is a prototype and is not financial advice.\n"),
-    code("%pip -q install " + " ".join(line for line in (ROOT / "requirements.txt").read_text().splitlines() if not line.startswith("--")) + " --extra-index-url https://download.pytorch.org/whl/cpu\n"),
-    md("## 1. Experiment source\nThe next cell writes the actual pipeline, including pinned revisions, timestamp rules, lagged features, selection grid, tests-period boundaries and metrics. No remote Python code is executed from the dataset or model repository.\n"),
-    code("%%writefile pipeline.py\n" + (ROOT / "pipeline.py").read_text()),
-    md("## 2. Execute the experiment\nCPU inference may take several minutes. Progress is saved after every batch; rerun this cell to resume after interruption. Network or data-validation errors stop the run rather than producing made-up results.\n"),
-    code("!python pipeline.py --stage all --batch-size 16\n"),
-    md("## 3. Inspect the real results\nA small direction-accuracy difference is not a trading edge. Compare probability error, uncertainty and per-coin support too.\n"),
-    code("import json\nfrom pathlib import Path\nimport pandas as pd\nreport = json.loads(Path('docs/report.json').read_text())\ndisplay(pd.DataFrame([{k:v for k,v in row.items() if k != 'per_coin'} for row in report['metrics']]))\ndisplay(pd.DataFrame(report['coverage']))\nprint(report['uncertainty'])\nprint(report['meta']['splits'])\n"),
-    md("## 4. Run the leakage and artifact checks\nThe tests use the real generated data and predictions.\n"),
-    code("%%writefile test_pipeline.py\n" + (ROOT / "test_pipeline.py").read_text()),
-    code("!python -m unittest -v test_pipeline.py\n"),
-    md("## 5. Optional: download your report\nYour Google Colab session is separate from Hermes. This notebook does not connect your Google account or expose its credentials.\n"),
-    code("# Uncomment in Google Colab to download the measured report.\n# from google.colab import files\n# files.download('docs/report.json')\n"),
-]}
-(ROOT / "HypeCheck.ipynb").write_text(json.dumps(notebook, indent=2))
-print("Generated README.md, requirements.lock.txt and full HypeCheck.ipynb from measured artifacts.")
+# The submission notebook lives in build_colab.py so the README, this deliverable script and
+# the notebook can never disagree about the measured numbers.
+subprocess.run([sys.executable, str(ROOT / "build_colab.py")], check=True)
