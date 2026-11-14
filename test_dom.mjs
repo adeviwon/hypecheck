@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
-const html = readFileSync('/home/ubuntu/Projects/hypecheck/docs/index.html', 'utf8');
-const report = JSON.parse(readFileSync('/home/ubuntu/Projects/hypecheck/docs/report.json', 'utf8'));
+const html = readFileSync(new URL('./docs/index.html', import.meta.url), 'utf8');
+const report = JSON.parse(readFileSync(new URL('./docs/report.json', import.meta.url), 'utf8'));
 
 function makeEl(tag) {
   const el = {
@@ -23,7 +23,7 @@ globalThis.document = {
 };
 globalThis.fetch = async () => ({ ok: true, json: async () => report });
 
-await import('/home/ubuntu/Projects/hypecheck/docs/app.js');
+await import('./docs/app.js');
 await new Promise(resolve => setTimeout(resolve, 250));
 
 function walk(el, out = []) {
@@ -35,7 +35,7 @@ function walk(el, out = []) {
 const assert = (await import('node:assert/strict')).default;
 const extendedRows = walk(store.get('extended'));
 const metricRows = walk(store.get('metrics'));
-assert.equal(metricRows.length, 6, `primary table rows: ${metricRows.length}`);
+assert.equal(metricRows.length, report.metrics.length, `primary table rows: ${metricRows.length}`);
 assert.equal(extendedRows.length, 5, `extended table rows incl. header: ${extendedRows.length}`);
 const names = extendedRows.slice(1).map(row => row.children[0].textContent);
 assert.deepEqual(names, ['Market only (primary)', 'Market + X (primary)', 'Market + BTC + intraday', 'Market + BTC + intraday + X']);

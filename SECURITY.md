@@ -30,3 +30,11 @@ node docs/app.js --self-test
 After generating data, also run `python -m unittest -v test_pipeline.py`.
 
 Never add arbitrary URL fetches, user-uploaded checkpoints, credentials or order execution to this demo without a new threat model and review.
+
+## Submission hardening
+
+- Cached sentiment JSON is checked for exact labels, numeric types, finite values, [0,1] bounds and probability sum before use. The cache is still local mutable data: these checks do not authenticate its origin. A clean execution recomputes it.
+- The loopback server refuses symlink targets and paths resolving outside its fixed docs root, even on allowlisted routes. A regression test attempts an allowlisted symlink to a private file.
+- Notebook subprocess failures stop execution; the local runner records errors rather than marking failed commands as successful cells.
+- Notebook regeneration preserves outputs only when the entire ordered code-cell sequence matches. Changed code invalidates saved execution outputs.
+- The dependency-audit JSON predates this hardening pass. It is historical evidence, not a new vulnerability scan or a clean bill of health.

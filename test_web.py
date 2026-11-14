@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 import threading
 import unittest
+import tempfile
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from http.server import ThreadingHTTPServer
@@ -25,6 +27,18 @@ class WebChecks(unittest.TestCase):
         cls.server.shutdown()
         cls.server.server_close()
         cls.thread.join(timeout=3)
+
+    def test_allowlisted_symlink_cannot_expose_private_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "public"
+            root.mkdir()
+            secret = Path(tmp) / "private.txt"
+            secret.write_text("not public")
+            (root / "report.json").symlink_to(secret)
+            with patch("serve.DOCS", root):
+                with self.assertRaises(HTTPError) as caught:
+                    urlopen(self.base + "/report.json", timeout=5)
+                self.assertEqual(caught.exception.code, 404)
 
     def test_real_report_and_security_headers(self):
         with urlopen(self.base + "/report.json", timeout=5) as response:

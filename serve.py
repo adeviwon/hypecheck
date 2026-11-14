@@ -34,7 +34,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         path, mime = target
         file = DOCS / path
-        if not file.is_file():
+        if file.is_symlink() or not file.resolve().is_relative_to(DOCS.resolve()) or not file.is_file():
             self.send_error(404)
             return
         body = file.read_bytes()

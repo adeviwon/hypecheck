@@ -12,6 +12,26 @@ import pipeline as p
 
 
 class PipelineChecks(unittest.TestCase):
+    def test_sentiment_cache_rejects_invalid_probabilities(self):
+        p.validate_sentiment_scores({"bullish": 0.2, "bearish": 0.3, "neutral": 0.5})
+        bad = [None, {}, {"bullish": True, "bearish": 0, "neutral": 0},
+               {"bullish": float("nan"), "bearish": 0, "neutral": 1},
+               {"bullish": -0.1, "bearish": 0.1, "neutral": 1},
+               {"bullish": 0.8, "bearish": 0.8, "neutral": 0.1}]
+        for value in bad:
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                p.validate_sentiment_scores(value)
+
+    def test_training_prevalence_baseline_is_train_only(self):
+        frame = pd.read_csv(p.ROOT / "data/features.csv", parse_dates=["date"])
+        train, _, test = p.split_dates(frame)
+        expected = p.metric("Training prevalence", test, np.full(len(test), train.actual_up.mean()))
+        report = json.loads((p.ROOT / "docs/report.json").read_text())
+        saved = next(row for row in report["metrics"] if row["name"] == "Training prevalence")
+        self.assertAlmostEqual(saved["brier"], expected["brier"], places=12)
+        self.assertAlmostEqual(saved["accuracy"], expected["accuracy"], places=12)
+
+
     def test_market_features_cannot_see_today_or_future(self):
         prices = p.load_prices("DOGE")
         original = p.market_features(prices)
@@ -182,7 +202,7 @@ class PipelineChecks(unittest.TestCase):
 
     def test_primary_metrics_are_unchanged_by_the_extension(self):
         report = json.loads((p.ROOT / "docs/report.json").read_text())
-        published = {"Always up": 0.465284974093264, "Training majority": 0.534715025906736,
+        published = {"Always up": 0.465284974093264, "Training majority": 0.534715025906736, "Training prevalence": 0.534715025906736,
                      "Previous direction": 0.492227979274611, "Market only": 0.536787564766839,
                      "Market + attention": 0.544041450777202, "Market + X": 0.530569948186528}
         measured = {row["name"]: row["accuracy"] for row in report["metrics"]}

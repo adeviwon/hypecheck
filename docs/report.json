@@ -1,7 +1,7 @@
 {
   "meta": {
     "project": "HypeCheck",
-    "generated_at": "2026-11-14T08:02:23.544479+00:00",
+    "generated_at": "2026-11-14T15:04:10.907339+00:00",
     "dataset": "StephanAkkerman/financial-tweets-crypto",
     "dataset_revision": "c4b17a94a667af3da1c9ed5144f998e3a4f29966",
     "sentiment_model": "StephanAkkerman/FinTwitBERT-sentiment",
@@ -157,6 +157,46 @@
           "accuracy": 0.47668393782383417,
           "balanced_accuracy": 0.4746821805645335,
           "brier": 0.5233160621761658,
+          "n": 193
+        }
+      }
+    },
+    {
+      "name": "Training prevalence",
+      "accuracy": 0.5347150259067357,
+      "balanced_accuracy": 0.5,
+      "brier": 0.2491353451302279,
+      "n": 965,
+      "n_dates": 193,
+      "per_coin": {
+        "DOGE": {
+          "accuracy": 0.5181347150259067,
+          "balanced_accuracy": 0.5,
+          "brier": 0.2496746355187393,
+          "n": 193
+        },
+        "SHIB": {
+          "accuracy": 0.538860103626943,
+          "balanced_accuracy": 0.5,
+          "brier": 0.24900052253310007,
+          "n": 193
+        },
+        "PEPE": {
+          "accuracy": 0.5129533678756477,
+          "balanced_accuracy": 0.5,
+          "brier": 0.24984316376514906,
+          "n": 193
+        },
+        "BONK": {
+          "accuracy": 0.5751295336787565,
+          "balanced_accuracy": 0.5,
+          "brier": 0.24782082480823134,
+          "n": 193
+        },
+        "FLOKI": {
+          "accuracy": 0.5284974093264249,
+          "balanced_accuracy": 0.5,
+          "brier": 0.24933757902591966,
           "n": 193
         }
       }
