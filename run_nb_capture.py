@@ -1,77 +1,64 @@
-"""Execute a notebook like Colab does, capturing stdout and the last expression's value back into it."""
-import ast, io, json, os, sys, time
-from contextlib import redirect_stdout
+"""Execute project notebooks locally; capture real outputs, fail on shell errors.
+Usage: python run_nb_capture.py notebook.ipynb empty-workdir
+Not a substitute for a live Google Colab test.
+"""
+import ast, contextlib, io, json, os, shlex, subprocess, sys, time, traceback
 from pathlib import Path
 
-nb_path = Path(sys.argv[1]).resolve()
-workdir = Path(sys.argv[2]).resolve()
-workdir.mkdir(parents=True, exist_ok=True)
-nb = json.loads(nb_path.read_text())
-os.environ["PATH"] = "/home/ubuntu/Projects/hypecheck/.venv/bin:" + os.environ.get("PATH", "")
-os.chdir(workdir)
-g = {"__name__": "__main__", "__file__": str(nb_path)}
-counter = 0
-
-def to_lines(text):
-    return text.splitlines(keepends=True) or [""]
-
-def run_source(src):
-    tree = ast.parse(src)
-    buf = io.StringIO()
-    result = None
-    if tree.body and isinstance(tree.body[-1], ast.Expr):
-        head = ast.Module(body=tree.body[:-1], type_ignores=[])
-        ast.fix_missing_locations(head)
-        with redirect_stdout(buf):
-            exec(compile(head, "<cell>", "exec"), g)
-        expr = ast.Expression(body=tree.body[-1].value)
-        ast.fix_missing_locations(expr)
-        with redirect_stdout(buf):          # the last expression can print too
-            result = eval(compile(expr, "<cell>", "eval"), g)
-    else:
-        with redirect_stdout(buf):
-            exec(compile(tree, "<cell>", "exec"), g)
-    return buf.getvalue(), result
-
-def fmt(result):
-    import numpy as _np
-    import pandas as _pd
-    if result is None:
-        return None
-    data = {}
-    if isinstance(result, (_pd.DataFrame, _pd.Series)):
-        data["text/plain"] = repr(result)
+def execute(nb_path, workdir):
+    nb_path = Path(nb_path).resolve()
+    workdir = Path(workdir).resolve()
+    workdir.mkdir(parents=True, exist_ok=True)
+    nb = json.loads(nb_path.read_text())
+    os.chdir(workdir)
+    sys.path.insert(0, str(workdir))
+    g = {'__name__': '__main__'}
+    start = time.monotonic()
+    count = 0
+    for (i, c) in enumerate(nb['cells']):
+        if c['cell_type'] != 'code':
+            continue
+        s = ''.join(c['source'])
+        if not s.strip():
+            continue
+        count += 1
+        print(f'CELL {i}: {s.splitlines()[0][:85]}', flush=True)
+        buf = io.StringIO()
+        c['execution_count'] = count
         try:
-            data["text/html"] = result.to_html()
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+                if s.startswith('%%writefile '):
+                    (first, body) = s.split('\n', 1)
+                    p = Path(shlex.split(first)[1])
+                    p.parent.mkdir(parents=True, exist_ok=True)
+                    p.write_text(body)
+                    print(f'Wrote {p}')
+                elif s.startswith('!'):
+                    args = shlex.split(s[1:])
+                    if args[0] in ('python', 'python3'):
+                        args[0] = sys.executable
+                    r = subprocess.run(args, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                    print(r.stdout, end='')
+                    r.check_returncode()
+                else:
+                    t = ast.parse(s)
+                    if t.body and isinstance(t.body[-1], ast.Expr):
+                        exec(compile(ast.fix_missing_locations(ast.Module(body=t.body[:-1], type_ignores=[])), '<cell>', 'exec'), g)
+                        v = eval(compile(ast.Expression(t.body[-1].value), '<cell>', 'eval'), g)
+                        if v is not None:
+                            print(repr(v))
+                    else:
+                        exec(compile(t, '<cell>', 'exec'), g)
+            c['outputs'] = [{'output_type': 'stream', 'name': 'stdout', 'text': buf.getvalue().splitlines(keepends=True)}]
         except Exception:
-            pass
-    else:
-        data["text/plain"] = repr(result)
-    return {"output_type": "execute_result", "execution_count": None, "data": data, "metadata": {}}
-
-start = time.time()
-for i, cell in enumerate(nb["cells"]):
-    if cell["cell_type"] != "code":
-        continue
-    src = "".join(cell["source"])
-    if not src.strip():
-        continue
-    counter += 1
-    head = src.splitlines()[0][:66]
-    print(f"\n{'='*72}\nCELL {i}  ({time.time()-start:.1f}s)  {head}\n{'='*72}", flush=True)
-    stdout, result = run_source(src)
-    outs = []
-    if stdout:
-        outs.append({"output_type": "stream", "name": "stdout", "text": to_lines(stdout)})
-    r = fmt(result)
-    if r is not None:
-        r["execution_count"] = counter
-        outs.append(r)
-    cell["execution_count"] = counter
-    cell["outputs"] = outs
-    print(stdout, end="", flush=True)
-    if r is not None:
-        print(f"[execute_result] {r['data'].get('text/plain','')[:300]}", flush=True)
-
-nb_path.write_text(json.dumps(nb, indent=1))
-print(f"\nALL CELLS EXECUTED OK in {time.time()-start:.1f}s  ({counter} code cells, outputs saved into the notebook)")
+            c['outputs'] = [{'output_type': 'stream', 'name': 'stdout', 'text': buf.getvalue().splitlines(keepends=True)}, {'output_type': 'error', 'ename': type(sys.exception()).__name__, 'evalue': str(sys.exception()), 'traceback': traceback.format_exc().splitlines()}]
+            nb_path.write_text(json.dumps(nb, ensure_ascii=False, indent=1) + '\n')
+            print(buf.getvalue(), flush=True)
+            raise
+        nb_path.write_text(json.dumps(nb, ensure_ascii=False, indent=1) + '\n')
+        print(buf.getvalue(), end='', flush=True)
+    summary = {'code_cells': count, 'seconds': round(time.monotonic() - start, 2), 'python': sys.version, 'status': 'passed'}
+    (workdir / 'notebook-execution.json').write_text(json.dumps(summary, indent=2) + '\n')
+    print(json.dumps(summary), flush=True)
+if __name__ == '__main__':
+    execute(sys.argv[1], sys.argv[2])

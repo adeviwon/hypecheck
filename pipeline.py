@@ -162,6 +162,17 @@ def load_prices(coin):
     return prices
 
 
+def validate_sentiment_scores(values):
+    """Treat the local JSON cache as untrusted numeric data, not model authority."""
+    if not isinstance(values, dict) or set(values) != {"bullish", "bearish", "neutral"}:
+        raise ValueError("Invalid cached sentiment labels; remove data/sentiment.json and rerun")
+    if any(isinstance(v, bool) or not isinstance(v, (int, float)) for v in values.values()):
+        raise ValueError("Invalid cached sentiment type")
+    probs = np.array(list(values.values()), dtype=float)
+    if not np.isfinite(probs).all() or (probs < 0).any() or (probs > 1).any() or not np.isclose(probs.sum(), 1.0, atol=1e-5):
+        raise ValueError("Invalid cached sentiment probabilities; remove data/sentiment.json and rerun")
+
+
 def score_posts(posts, batch_size=16):
     """Frozen safe-weights inference; checkpoints are data, never Python pickle."""
     import torch
@@ -197,6 +208,7 @@ def score_posts(posts, batch_size=16):
     records = []
     for row in posts.to_dict("records"):
         values = cache["scores"][str(row["tweet_id"])]
+        validate_sentiment_scores(values)
         row.update(values)
         row["sentiment"] = values["bullish"] - values["bearish"]
         records.append(row)
@@ -473,7 +485,8 @@ def fit_and_report(raw, posts, prices, hourly, btc):
     majority = int(train.actual_up.mean() >= 0.5)
     metric_rows = [metric("Always up", test, np.ones(len(test))),
                    metric("Training majority", test, np.full(len(test), majority, dtype=float)),
-                   metric("Previous direction", test, (test.ret1.to_numpy() > 0).astype(float))]
+                   metric("Previous direction", test, (test.ret1.to_numpy() > 0).astype(float)),
+                   metric("Training prevalence", test, np.full(len(test), float(train.actual_up.mean())))]
     metric_rows += [metric(name, test, p) for name, p in probabilities.items()]
     predictions = []
     for idx, row in enumerate(test.to_dict("records")):

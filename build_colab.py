@@ -59,7 +59,7 @@ def table(rows, header):
 VALUES = {
     "@@METRIC_TABLE@@": table(
         [[name, pct(M[name]["accuracy"]), pct(M[name]["balanced_accuracy"]), f"{M[name]['brier']:.4f}", M[name]["n"]]
-         for name in ["Always up", "Training majority", "Previous direction",
+         for name in ["Always up", "Training majority", "Training prevalence", "Previous direction",
                       "Market only", "Market + attention", "Market + X"]],
         ["Method", "Direction accuracy", "Balanced accuracy", "Brier error (lower is better)", "Test coin-days"]),
     "@@EXT_TABLE@@": table(
@@ -118,36 +118,23 @@ def code(text):
 
 
 md("""
-# HypeCheck — Hype is a volatility signal, not a direction signal
+# HypeCheck — Signal or Noise?
 
 **Track: AI + Finance** · Veritas AI International High School Hackathon 2026
 **Team:** Nathaniel Wong (model) · Aaden Yick (data) · Alastair Chu (demo and write-up) · Malvern College Hong Kong
 
 *This project is a prototype and is not financial advice.*
 
-**Our question.** We began where the brief suggests — *does X sentiment predict next-day price
-direction?* — and the answer was a flat no. Rather than stop at a null, we asked the question
-the data could actually answer: **how does the total hype around a coin on X relate to that
-coin's price?**
-
-**Three findings. Only the third is negative.**
-
-| # | Finding | Measured evidence |
-|---|---|---|
-| 1 | **Hype can be measured from text** | A learned TF-IDF to Ridge meter scores held-out **Spearman +0.480** against an independent neural sentiment model, at **99.7% coverage**, with no saturation. |
-| 2 | **Hype moves the price the same day** | Net hype to same-day open-close **rho +0.115 (p=1.3e-06)**. **Post volume to same-day move size rho +0.166 (p=2.7e-12)** - our strongest effect. |
-| 3 | **Hype does not predict the future** | Net hype to +1d/+3d/+7d all p>0.10. No model beats the 56.0% base rate. The "tweets are the sole driver" premise was falsified five ways. |
-
-**The best measure of hype is not sentiment at all - it is how many people are talking.**
-Post *count* predicts how far a coin moves better than how excited the posts sound.
+**Our question.** Does X sentiment add predictive information beyond market history about the
+**next-day direction** of five memecoins — DOGE, SHIB, PEPE, BONK and FLOKI?
 
 **What goes in, what comes out.** In: the posts published in the 24 hours before a fixed UTC cutoff,
 plus that coin's own price history up to the same moment. Out: a probability that the next UTC day
 closes up, placed beside three simple baselines and a market-only model, plus a historical replay
 where you can see what actually happened next.
 
-**The direction result is negative, and we report it as measured.** Adding sentiment did **not**
-improve next-day forecasts. Market + X scored a *worse* held-out probability error (Brier
+**The headline result is negative, and we report it as measured.** Adding sentiment did **not**
+improve the forecasts. Market + X scored a *worse* held-out probability error (Brier
 @@BRIER_SOCIAL@@) than market-only (@@BRIER_MARKET@@), and on the @@N_WITH@@ test coin-days that actually had posts it was
 clearly worse (42.96% vs 51.41% direction accuracy). The date-block interval for the difference
 crosses zero. Below, we show exactly where it breaks and why.
@@ -203,6 +190,11 @@ if IN_COLAB:
         check=True,
     )
     print("Installed the pinned libraries (CPU PyTorch build).")
+
+def run_checked(args):
+    result = subprocess.run(args, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    print(result.stdout, end="")
+    result.check_returncode()
 
 import numpy
 import pandas
@@ -374,7 +366,7 @@ is interrupted, rerun it and it resumes from `data/sentiment.json` instead of st
 or validation failure stops the run; the pipeline never substitutes made-up data.
 """)
 
-code("!python pipeline.py --stage all --batch-size 16")
+code('run_checked([sys.executable, "pipeline.py", "--stage", "all", "--batch-size", "16"])')
 
 
 md("""
@@ -488,110 +480,24 @@ print("\\nThe model is also right for the wrong reason: daily prices are persist
 """)
 
 md("""
-## 6 · The richer post-level model — who said it, how they said it, and why the 80/20 flatters it
+## 6 · Exploratory appendix: richer features and split sensitivity
 
-Section 4 asks whether sentiment predicts direction. This section asks the question a judge should ask
-next: **does more specific data help?** We rebuild the model on 40 features in seven blocks.
+The next cells optionally reproduce a later comparison of wording, author proxies and a curated lexicon.
+The random split has shared dates across train/test and must not headline this project.
+Set RUN_EXPLORATORY=True below to print chronological and date-based walk-forward tables. This slow search is off by default and is not part of the primary claim.
 
-| Block | Features | n |
-|---|---|---|
-| Market | prior-day return 1/3/7, realised volatility, range, volume change | 6 |
-| Past trend | trailing 10- and 30-day up-rate, trailing 10-day mean return | 3 |
-| BTC and intraday | BTC prior-day 1/7, hourly volatility, hourly range, last-hour return, taker ratio | 6 |
-| Post volume | posts per coin-day, log posts, distinct authors, top-author share | 4 |
-| **The words used** | bullish, bearish, urgency, extreme claim, promotion, evidence, uncertainty, exclamations, external link, polarity, word count, CAPS share | 12 |
-| **Who posted it** | author known, prior-30-day post count, prior-30-day active days | 3 |
-| **Hype lexicon** | net bull-minus-bear word count, bull count, bear count, mean and max hype-meter score, share of posts matched | 6 |
+These feature blocks were explored after the primary analysis: selecting the best block is
+not independent confirmation. The control model is the lexicon-augmented block, not necessarily
+the best-accuracy model. Read each model's AUC and forward-window count from its own output.
+The lexicon is a heuristic, not human-labelled truth or a validated attention meter.
+Author identities are anonymised; missing identity is flagged. No follower counts are available.
+The results are exploratory, not trading evidence.
 
-Two limits, stated up front rather than buried, because each one costs a feature a judge might expect:
-
-- **This data contains no follower counts.** The only reach proxy is engagement — views, likes, replies,
-  retweets — and it exists on 177 of 1,274 posts, every one of them dated 2026-04-11 or later. Feeding it
-  to the model would teach it *this row is from 2026*, not *this author is loud*. We exclude it, and the
-  notebook prints that coverage so the exclusion is checkable rather than claimed.
-- **64% of posts carry no author identity at all.** Author behaviour is therefore measured only where it
-  exists, and flagged with `author_known`, so the learner can separate *no known author* from *an author
-  with a zero*. The published table is anonymised: author keys are renumbered `author_001`, and post text,
-  handles, display names, tweet IDs and per-person engagement are dropped before publication.
-
-Then three splits, because here **the split decides the answer**:
-
-| Split | Definition | What it hides |
-|---|---|---|
-| A | flat random 80/20 | 60.8% of its test rows share a calendar date with train, and 99.6% of its test posts come from authors already in train |
-| B | chronological 80/20, 1-day purge | nothing — train on the past, test on the future |
-| C | walk-forward, 6 date blocks | nothing — 4 forward windows, refit each time, 460 out-of-sample coin-days |
-
-Two controls decide whether any gain is real: **label permutation** (destroy the training labels, keep
-everything else) and a **feature placebo** (shuffle the post columns across rows, keep the labels).
-
-### The hype meter — 234 curated words and phrases, measured against the corpus
-
-You asked for something specific: label each post hype, bullish or bearish from its actual word choice,
-name the words, and rate each one on a hype meter. `data/hype-lexicon.csv` is that artefact, and the
-honest version of it is more interesting than a clean table would have been.
-
-Method: curate the vocabulary (234 memecoin words, phrases and emojis), then **measure every entry against
-the corpus** instead of trusting it. Two independent yardsticks:
-
-- **bull / bear** — the share of posts containing the term that the *replication bundle's own* independent
-  lexicon flagged as bullish or bearish.
-- **hype meter (0–100)** — the share of posts containing the term that carry an independent hype marker:
-  an exclamation mark, 30% or more capitals, a promotion flag, urgency, or an extreme claim. Corpus
-  baseline: **16.1%**.
-
-| Outcome of measurement | Terms |
-|---|---|
-| Validated by the corpus | 9 |
-| Weak | 24 |
-| Hype-only (direction-neutral) | 28 |
-| Too rare to judge (n < 5) | 97 |
-| **Never appears in the corpus** | **67** |
-| Contradicted by the corpus | 9 |
-
-Three findings that matter more than the table:
-
-1. **The classic hype vocabulary is not in this data.** `to the moon`, `100x`, `rugpull`, `guaranteed`,
-   `lambo`, `rekt` — 67 curated terms never appear once. This corpus is not retail shilling; it is
-   technical-analysis commentary from 49 accounts.
-2. **The hype meter does not measure hype.** Spearman between our post-level hype score and the
-   independent hype markers is **+0.012** — zero. Every term scoring near 100 appears in a handful of
-   posts, and each traces back to one account's ALL-CAPS ticker lists. In this corpus, hype lives in
-   formatting, not vocabulary.
-3. **The direction lexicon does work, moderately.** It agrees with the bundle's independent lexicon on
-   **105 of the 145** posts where that lexicon fires (72%), Spearman on net bull-minus-bear intensity is
-   **+0.41**, and it covers **30.8%** of posts against the bundle's **11.4%** — nearly three times the
-   reach, from the same corpus.
-
-Fed into the model as a seventh block, the lexicon is the first feature set to move the walk-forward AUC
-clear of both controls: **0.5627** against a label-permutation null of 0.499 ± 0.023 (the real value sits
-above all 20 draws) and a feature placebo of 0.514 ± 0.014. That is the strongest signal this project has
-found — and it is still only AUC 0.56 across 460 out-of-sample coin-days, still beating its majority
-baseline in 1 of 4 forward windows. Promising is not tradeable, and we are not going to pretend otherwise.
-
-Measured by the next two cells:
-
-| Split | Best block | Accuracy | Edge over majority class | AUC |
-|---|---|---|---|---|
-| A — flat 80/20 (leaky) | + the words used | 0.6014 | **+8.11pp** | 0.5995 |
-| B — chronological 80/20 | + hype lexicon | 0.5751 | +6.36pp | 0.5849 |
-| C — walk-forward | + FinTwitBERT sentiment | 0.5511 | — | 0.5687 |
-
-The flat split is the one that would win a pitch, and it is the one that lies. **The best walk-forward
-result sits 5.0 accuracy points below the best flat-split result**, because in a walk-forward the test rows
-stop sharing dates and authors with training. Even in the honest split the richest model beats its own
-majority baseline in only **2 of 4** forward windows. Author behaviour and the hype lexicon each add
-roughly 2.5pp accuracy over the market-only model in the walk-forward (AUC 0.553 and 0.563 against 0.480)
-— real movement, and still not a durable edge.
-
-So the answer to *would more specific data help?* is the same as section 5's, arrived at a second way: not
-as measured. What the extra data does buy is a demonstration of how a flat 80/20 split manufactures a
-nine-point edge out of nothing, which is the failure mode this project exists to expose.
 """)
 
 code("%%writefile postmodel.py\n" + POSTMODEL)
 
-code("!python postmodel.py --data-dir data --json postmodel.json")
+code('RUN_EXPLORATORY = False\nif RUN_EXPLORATORY:\n    subprocess.run([sys.executable, "postmodel.py", "--data-dir", "data", "--json", "postmodel.json"], check=True)\nelse:\n    print("Exploratory search skipped. Set RUN_EXPLORATORY=True to reproduce it.")')
 
 md("""
 ## 7 · Verification — the checks we ran against ourselves
@@ -620,127 +526,41 @@ dashboard reads the same `docs/report.json`, so the interface cannot drift from 
 
 code("%%writefile test_pipeline.py\n" + TESTS)
 
-code("!python -m unittest -v test_pipeline.py")
+code('run_checked([sys.executable, "-m", "unittest", "-v", "test_pipeline.py"])')
 
 md("""
-## 8 · Write-up
+## 8 · Submission write-up (approximately one page)
 
-**HypeCheck: Hype is a volatility signal, not a direction signal**
-**Track:** AI + Finance · **Team:** Nathaniel Wong (model), Aaden Yick (data), Alastair Chu (demo and write-up) — Malvern College Hong Kong
+# HypeCheck: Signal or Noise?
 
-*This project is a prototype and is not financial advice.*
+**Track:** AI + Finance
+**Team:** Nathaniel Wong (model), Aaden Yick (data), Alastair Chu (demo and write-up) — Malvern College Hong Kong
 
-### The problem
-A beginner crypto investor watching DOGE, SHIB, PEPE, BONK and FLOKI sees a timeline full of confident
-posts and has no way to tell whether any of it is information or noise. The stakes are real: memecoin
-moves are violent, and "the crowd knows something" is exactly the belief that hype monetises. We built
-the tool we wanted as sceptics — one that answers *"does this actually predict anything?"* with a
-measured number instead of a promise.
+## The problem
+A beginner crypto investor sees confident social posts but cannot tell whether sentiment adds information beyond price history. We test that claim rather than recommend trades.
 
-The guide's example of a well-scoped version of a too-broad idea is *"a test of whether news-headline sentiment helps predict next-day price moves for five stocks, reported honestly either way."* Our project is that test run on five memecoins and X posts rather than headlines, and we report the answer either way. It came out negative: sentiment did not improve the forecasts.
+## What we built
+A reproducible notebook and historical replay dashboard. Input: archived posts available before UTC midnight and completed market bars. Output: next-day up probabilities from market-only and sentiment-added models, alongside simple baselines and the actual historical outcome.
 
-### What we built
-In: the posts published in the 24 hours before a fixed UTC cutoff, plus that coin's own price history.
-Out: a probability that the next UTC day closes up, next to three simple baselines and a market-only
-model, with the option to replay any held-out date and see what happened. It runs as this notebook and
-as a static dashboard ([@@SITE@@](@@SITE@@)) reading the same report.
+## What we added
+We adapt suggested project **4.2.4, News headlines and the stock market** from Dow/headlines to five memecoins/X posts. We add conservative source-availability alignment, purged chronological dates, market/attention/sentiment ablations, date-block uncertainty and explicit failure analysis.
 
-### What we added beyond suggested project 4.2.4
-The brief prescribes headlines → sentiment → predict the Dow. We changed the market (five memecoins),
-the news source (X posts) and the evaluation discipline: a pre-declared selection rule, purged
-partitions, an ablation, a date-block interval, a second independent scoring pass, and per-coin
-sparse-coverage accounting. We did **not** invent FinTwitBERT or logistic regression, and we say so.
+## How it works
+104,379 public archived posts yield 1,124 eligible original deduplicated posts about DOGE, SHIB, PEPE, BONK and FLOKI. Frozen, revision-pinned FinTwitBERT scores sentiment. Logistic regression uses lagged market features and coin identity, with regularisation selected on validation Brier error. Train, validation and test dates are shared across coins, with one-day boundary purges. The final test contains 965 coin-days across 193 dates; models are not retuned on that period.
 
-### How it works
-- **Data.** `@@SENT_MODEL@@` is the model; the data is `StephanAkkerman/financial-tweets-crypto` at
-  revision `@@DATASET_REV@@` — 104,379 posts reduced to **1,124 eligible** original deduplicated posts.
-  Prices: continuous Binance USDT daily bars, 1,025 days per coin, 2024-01-01 → 2026-10-21.
-- **Sentiment.** Frozen FinTwitBERT (`@@SENT_REV@@`), bullish / bearish / neutral, 128-token truncation,
-  no fine-tuning of any kind.
-- **Model.** Pooled regularised logistic regression on lagged market features plus a one-hot coin
-  identity, `C` selected on validation Brier, decision threshold 0.5.
+## Results
+Market-only accuracy: **53.68%**; market + sentiment: **53.06%**; training-majority baseline: **53.47%**. Brier error (lower is better): **0.2481** market-only versus **0.2491** with sentiment. The paired difference is **+0.001065**, exploratory 95% date-block interval **[−0.000159, +0.002483]**. We did not demonstrate incremental forecasting value from sentiment. The 54.40% attention-arm accuracy is descriptive, not a demonstrated edge.
 
-### Results
-@@METRIC_TABLE@@
+Only **142 of 965** test coin-days have eligible posts. One confident miss was DOGE on 2026-10-10: the social model assigned about 33% probability of a rise, but the coin rose about 0.45%; its attached post concerned Bitcoin liquidations. Sparse coverage, retrospective ticker tags and checkpoint dependence limit interpretation. This result does not establish causality, profitability or that better data cannot help.
 
-Social-minus-market Brier difference **@@GAP@@**, 95% date-block interval **[@@LOW@@, @@HIGH@@]** (1,000
-circular 7-day moving-block resamples with coins kept together by date). Positive favours market-only
-and the interval crosses zero, so **we do not demonstrate that sentiment improves these forecasts.**
+## What we'd do next
+Collect a prospective, source-balanced archive and test once on a genuinely new future period. Hand-label post intent to separate coin-specific opinions from sector news.
 
-The sharper finding is where sentiment should have helped most. On the **@@N_WITH@@ test coin-days that
-actually had posts**, market-only scored 51.41% direction accuracy against 42.96% for market + X. On
-the @@N_DISAGREE@@ coin-days where the two models disagreed, market-only was right @@RIGHT_MARKET@@ times against
-@@RIGHT_SOCIAL@@ — and on the @@N_DISAGREE_POSTS@@ of those with posts, @@RIGHT_MARKET_POSTS@@ against @@RIGHT_SOCIAL_POSTS@@.
+## Sources
+[Dataset](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto), [FinTwitBERT](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), [Binance bars](https://github.com/binance/binance-spot-api-docs), scikit-learn, PyTorch, Transformers and dependencies. Hermes Agent/OpenAI assisted implementation and review. Full revisions and credits are in the notebook; the team must understand and explain the work.
 
-Secondary arm, identical held-out rows:
+**This project is a prototype and is not financial advice.**
 
-@@EXT_TABLE@@
-
-Coverage, which is the real constraint:
-
-@@COVERAGE_TABLE@@
-
-### Where it fails
-- Posts that are sector commentary, whale-watching or market-wide news but carry a ticker get read as
-  coin sentiment. Our most confident error, 2026-10-10 DOGE (`p(up)=0.33`, actual **+0.45%**), rests on
-  a post about Bitcoin liquidations; 2026-06-15 FLOKI (`p(up)=0.36`, actual **+3.14%**) rests on "is the
-  crypto gaming sector over?" — a bearish sector take, not a call on FLOKI.
-- Sparse coverage is structural: DOGE has 638 eligible posts across 306 days while SHIB has 45 across
-  42. @@N_WITH@@ of @@N_TOTAL@@ test coin-days had no eligible post at all.
-- The archive's ticker tags are retrospective curation, so we cannot prove the tag was right at the time.
-- Sentiment here means "text about this coin", never "this coin will rise".
-
-### Would better data fix this?
-The obvious objection is that our source is thin. We tested it directly **after** the run was frozen —
-nothing below changed the model, the features or the selection, and we report it as a post-hoc diagnostic.
-
-Coverage is the binding constraint, and raising it moves the headline the wrong way:
-
-| Test coin-days | n | Market only | Market + X |
-|---|---:|---:|---:|
-| Had eligible posts | 142 | 51.41% | **42.96%** |
-| No eligible posts | 823 | 54.07% | 54.80% |
-
-Pooled: `0.147 x 42.96 + 0.853 x 54.80 = 53.06%` — exactly the figure above. Sentiment exists on 14.7% of
-test days and lowers accuracy on precisely those days, so giving every day posts would push the pooled
-number toward **43%**, not up.
-
-More posts per day, and stronger sentiment, behave the same way:
-
-| Slice of the 142 rows with posts | n | Market only | Market + X |
-|---|---:|---:|---:|
-| Exactly 1 post | 122 | 52.5% | 44.3% |
-| 2 posts | 11 | 54.5% | 36.4% |
-| \|sentiment\| 0–0.25 | 16 | 68.8% | 37.5% |
-| \|sentiment\| 0.25–0.6 | 25 | 56.0% | 44.0% |
-| \|sentiment\| 0.6–1.0 | 101 | 47.5% | 43.6% |
-
-There is no monotone relationship for more data to sharpen — Spearman rho of sentiment against next-day
-return: train **+0.076** (p=0.070, n=549), validation **−0.180** (p=0.335, n=30), test **−0.027** (p=0.733,
-n=143). One relationship did reach p<0.05: |sentiment| against next-day high-low range on the test set
-(rho +0.196). It flipped sign on train (−0.064) and validation (−0.201), so we treat it as a false positive
-rather than a lead, and we are flagging it here rather than quietly keeping the one that looked good.
-
-The honest reading: **this is not a data-volume problem.** Next-day direction of a liquid, heavily watched
-asset is close to what public posts cannot tell you, and a larger archive of the same kind of posts would
-sharpen a number that already sits next to a coin flip.
-
-One calibration we owe a reader. On direction accuracy, market-only beats the trivial "always predict the
-training majority" rule by **0.21 points** (53.68% vs 53.47%). Where it genuinely earns its keep is
-probability error: Brier **0.2481** against the same baseline's 0.4653 — **46.7% lower**. The model's value
-is calibrated uncertainty, not direction, and the interface says so on its face.
-
-### What we'd do next
-1. Collect a prospective, source-balanced stream instead of a retrospective archive, and evaluate on a
-   genuinely later period, with the sentiment model fine-tuned on memecoin language.
-2. Label a few hundred posts by hand for *intent* — directional call, sector news, promotion, factual —
-   rather than trusting the archive's retrospective ticker tags, then use those labels to score posts
-   Our failure analysis says that is where most of the error lives.
-3. Report a cost-sensitive measure, because a missed move and a false alarm cost a beginner very
-   differently.
-
-### Limitations
-@@LIMITATIONS@@
 """)
 
 md("""
@@ -748,7 +568,7 @@ md("""
 
 | Form question | Our answer |
 |---|---|
-| **Project title** | HypeCheck: Hype is a volatility signal, not a direction signal |
+| **Project title** | HypeCheck: Signal or Noise? |
 | **Building as** | Team |
 | **Team details** | Nathaniel Wong (model) · Aaden Yick (data) · Alastair Chu (demo and write-up) — Malvern College Hong Kong. *Before submitting, paste each member's email here in that order, spelled as it should appear on certificates.* |
 | **Track** | AI + Finance |
@@ -756,7 +576,7 @@ md("""
 | **Scope, in the guide's format** | A test of whether X-post sentiment helps predict next-day price moves for five memecoins (DOGE, SHIB, PEPE, BONK, FLOKI), reported honestly either way. |
 | **One-sentence pitch** | HypeCheck takes a memecoin's X posts and its own price history and tells a beginner investor whether the hype carries any predictive signal at all — reporting honestly that, in our measured run, it does not. |
 | **Code link** | [This Colab notebook](@@COLAB@@) or the [repository](https://github.com/@@REPO@@) |
-| **Headline result** | **54.40%** accuracy against a **53.47%** base rate on 965 held-out coin-days — a +0.93 point edge. A richer 40-feature model reaches **60.14%** on a flat random 80/20 split, but 60.8% of that split's test rows share a calendar date with training rows and 99.6% of its test posts come from authors already seen in training; the same model walk-forward gives **55.11%** and beats its baseline in 2 of 4 windows. We report the split that survives, not the one that flatters. |
+| **Headline result** | No demonstrated incremental value from sentiment: 53.06% accuracy vs 53.68% market-only, Brier difference @@GAP@@, exploratory 95% date-block interval [@@LOW@@, @@HIGH@@]. The 54.40% attention result is descriptive; random-split 60.14% is not a defensible headline. |
 | **Write-up** | Section 8 of this notebook, and the repository README |
 | **Demo video link** | *optional — add the unlisted YouTube or Drive link* |
 | **What we added** | A different market (five memecoins, not the Dow) and source (X posts, not headlines); a frozen pretrained sentiment model with conservative availability alignment; an ablation from market-only → +attention → +sentiment; a pre-declared selection rule with purged partitions; a date-block uncertainty estimate; a second independent scoring pass; a failure analysis of the confident misses; a 40-feature post-level model run across three split protocols that catches an ordinary random split manufacturing a 60.14% result and reports the honest walk-forward number instead; and a 234-term hype lexicon with a measured per-word hype meter. |
@@ -776,7 +596,7 @@ md("""
 - **Libraries:** PyTorch, Hugging Face Transformers, safetensors, scikit-learn, pandas, NumPy, PyArrow, Requests — each keeps its own licence.
 - **Evaluation guidance:** [scikit-learn common pitfalls](https://scikit-learn.org/stable/common_pitfalls.html).
 - **Hackathon brief and rules:** [highschoolhackathon.org](https://highschoolhackathon.org/briefs.html) and the participant guide, sections 5–10.
-- **AI tools:** Hermes Agent with OpenAI models was used for research, implementation, review and testing. Every number here is reproducible from this notebook, and the team can explain every part.
+- **AI tools:** Hermes Agent with OpenAI models was used for research, implementation, review and testing. The primary results are reproduced by this notebook. The team must review and explain every part before submission.
 
 Code is MIT licensed (`LICENSE`). Third-party posts, model weights, market data and libraries keep
 their original terms.
@@ -820,6 +640,14 @@ notebook = {
 }
 
 out = ROOT / "HypeCheck.ipynb"
+if out.exists():
+    previous = json.loads(out.read_text())
+    old_code = [c for c in previous["cells"] if c["cell_type"] == "code"]
+    new_code = [c for c in cells if c["cell_type"] == "code"]
+    if [c["source"] for c in old_code] == [c["source"] for c in new_code]:
+        for old_cell, new_cell in zip(old_code, new_code):
+            new_cell["outputs"] = old_cell.get("outputs", [])
+            new_cell["execution_count"] = old_cell.get("execution_count")
 out.write_text(json.dumps(notebook, ensure_ascii=False, indent=1) + "\n")
 print(f"wrote {out.name} — {len(cells)} cells, {out.stat().st_size / 1024:.1f} KB")
 unfilled = [t for t in VALUES if t in out.read_text()]
