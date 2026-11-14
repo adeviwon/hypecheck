@@ -137,6 +137,10 @@ improve the forecasts. Market + X scored a *worse* held-out probability error (B
 clearly worse (42.96% vs 51.41% direction accuracy). The date-block interval for the difference
 crosses zero. Below, we show exactly where it breaks and why.
 
+**How the guide would scope it.** The guide's example of a weekend-sized version of *"predict the stock market"* is
+*"a test of whether news-headline sentiment helps predict next-day price moves for five stocks, reported honestly either way."*
+Our project is exactly that test — a test of whether X-post sentiment helps predict next-day price moves for five memecoins (DOGE, SHIB, PEPE, BONK, FLOKI), reported honestly either way — with the market and the news source swapped.
+
 **Starting point.** Suggested project **4.2.4 News headlines and the stock market** (AI + Finance
 brief), which invites *"a different market, time period or news source"*. We changed the market
 (five memecoins instead of the Dow Jones), the news source (X posts instead of newspaper headlines),
@@ -499,6 +503,8 @@ moves are violent, and "the crowd knows something" is exactly the belief that hy
 the tool we wanted as sceptics — one that answers *"does this actually predict anything?"* with a
 measured number instead of a promise.
 
+The guide's example of a well-scoped version of a too-broad idea is *"a test of whether news-headline sentiment helps predict next-day price moves for five stocks, reported honestly either way."* Our project is that test run on five memecoins and X posts rather than headlines, and we report the answer either way. It came out negative: sentiment did not improve the forecasts.
+
 ### What we built
 In: the posts published in the 24 hours before a fixed UTC cutoff, plus that coin's own price history.
 Out: a probability that the next UTC day closes up, next to three simple baselines and a market-only
@@ -572,6 +578,7 @@ md("""
 | **Team details** | Nathaniel Wong (model) · Aaden Yick (data) · Alastair Chu (demo and write-up) — Malvern College Hong Kong. *Before submitting, paste each member's email here in that order, spelled as it should appear on certificates.* |
 | **Track** | AI + Finance |
 | **Starting point** | 4.2.4 News headlines and the stock market |
+| **Scope, in the guide's format** | A test of whether X-post sentiment helps predict next-day price moves for five memecoins (DOGE, SHIB, PEPE, BONK, FLOKI), reported honestly either way. |
 | **One-sentence pitch** | HypeCheck takes a memecoin's X posts and its own price history and tells a beginner investor whether the hype carries any predictive signal at all — reporting honestly that, in our measured run, it does not. |
 | **Code link** | [This Colab notebook](@@COLAB@@) or the [repository](https://github.com/@@REPO@@) |
 | **Write-up** | Section 7 of this notebook, and the repository README |
