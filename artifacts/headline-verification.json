@@ -1,0 +1,24 @@
+{
+  "status": "passed",
+  "execution": "clean-directory server execution, not actual Colab",
+  "notebook_seconds": 27.49,
+  "code_cells_with_outputs": 10,
+  "python_tests": 38,
+  "source_parity": true,
+  "model_json_parity": true,
+  "clean_report_exact_match": true,
+  "generator_idempotence": true,
+  "hashes": {
+    "HypeCheck.ipynb": "eea48c906947d53361018947b8533d13bc3f8dee8deec0b8d884fe6497f08114",
+    "README.md": "ed81b2159d734b74a4da6cc24b5edb1de755bc7dfb1457b7bf32c13e454dccb4",
+    "WRITEUP.md": "04a9ff2e85b71dc33ff486a5941b2dbc46df2fae72688db451b6e26ace164dc9",
+    "headline_study.py": "43b379d349b458f8ff489bebb3bb72fe9026bbae9a9532522a27a7e49df7d533",
+    "pipeline.py": "58a80d95767c43b794bad48ed5818bf8b18d0ce49e5fed35e5201e509b7574c6",
+    "docs/headline-report.json": "a860d636d747a5f902fda95c45511b320cbceae19827c6716d32c1ebc1e23e86",
+    "artifacts/headline-model.json": "6b5ea7d0ccac956dd7816eb6f294f0ac13e415d899b0ac8794154067f698ec82",
+    "artifacts/headline-predictions.csv": "fcbdcf86f53da0401d5bd94e4c3a0cc7bbd1bbe8466460dbed6ab5b29a3f4756",
+    "docs/headlines.html": "2ae90a4fba97fbe93ceced0105189a9270ab3bf0e66532abeb2cc77e009fe758",
+    "docs/headlines.js": "b66afeeca366f29405943a8e9ad51e532ef30c9e211932b8632a418908110786",
+    "docs/headlines.css": "b302a7c50e488c8178949e8af4ca12e857852f786974f5a864af2c513a309962"
+  }
+}

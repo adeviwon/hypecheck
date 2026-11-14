@@ -10,7 +10,7 @@ async function harness(fail=false){
  const context={document:{createElement:()=>new E(),getElementById:id=>{assert(els[id],id);return els[id];}},
   Option:function(label,value){this.option=true;this.textContent=label;this.value=value;},
   fetch:async url=>({ok:!fail,json:async()=>url==='headline-report.json'?report:records}),console};
- vm.runInNewContext(html.match(/<script>([\s\S]*?)<\/script>/)[1],context);
+ vm.runInNewContext(fs.readFileSync('docs/headlines.js','utf8'),context);
  await new Promise(resolve=>setImmediate(resolve));
  return els;
 }

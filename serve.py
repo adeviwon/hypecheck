@@ -11,6 +11,7 @@ FILES = {"/": ("index.html", "text/html; charset=utf-8"),
          "/style.css": ("style.css", "text/css; charset=utf-8"),
          "/favicon.svg": ("favicon.svg", "image/svg+xml"),
          "/report.json": ("report.json", "application/json; charset=utf-8")}
+FILES.update({'/headlines.html': ('headlines.html', 'text/html; charset=utf-8'), '/headlines.js': ('headlines.js', 'text/javascript; charset=utf-8'), '/headlines.css': ('headlines.css', 'text/css; charset=utf-8'), '/headline-report.json': ('headline-report.json', 'application/json; charset=utf-8'), '/headline-predictions.json': ('headline-predictions.json', 'application/json; charset=utf-8')})
 CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 
 

@@ -68,3 +68,9 @@ d=pd.read_csv(R/'artifacts/headline-predictions.csv')
 (R/'docs/headline-predictions.json').write_text(d.to_json(orient='records'))
 subprocess.run([sys.executable,str(R/'build_headline_colab.py')],check=True)
 print('Generated focused README, replay data and notebook.')
+
+summary = ['# HypeCheck - Signal or Noise?', '', 'This project is a prototype and is not financial advice.', '', 'We test whether prior-day headline-style X posts add information about next-day open-to-close direction for DOGE, SHIB, PEPE, BONK and FLOKI.', '', '## Results', '']
+for name in ['Always up', 'Previous-day direction', 'Sentiment + coin', 'Training majority', 'Market only', 'Market + sentiment']:
+    summary.append(name + ': ' + format(m[name]['accuracy'], '.2%'))
+summary += ['', 'The sentiment model does not beat training majority; adding sentiment does not establish improvement beyond market history. No text kind demonstrated reliable improvement. Sparse archive coverage and exploratory reuse limit inference.', '', 'No trading, profit or causal claim is justified. This does not prove prediction is impossible.', '', 'Full method, paired intervals, sources and credits: README.md. Measured report: docs/headline-report.json. Colab: HypeCheck.ipynb.']
+(R/'WRITEUP.md').write_text(chr(10).join(summary)+chr(10))
