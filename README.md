@@ -7,7 +7,7 @@ Does X sentiment add predictive information beyond market history for DOGE, SHIB
 **Finding:** this fixed retrospective experiment does **not demonstrate improved forecasts from sentiment**. Market + X has a higher (worse) held-out Brier score than market-only; the exploratory date-block uncertainty interval crosses zero. This is a research demo, not an edge, a live signal or a trading strategy.
 
 - **Demo:** https://adeviwon.github.io/hypecheck/
-- **Colab:** open `HypeCheck.ipynb` in Google Colab, or upload that file. No account credentials are needed by this repository.
+- **Colab:** [open `HypeCheck.ipynb`](https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb) and press `Runtime → Run all`, or upload the file. No account credentials are needed by this repository. The notebook fetches every input itself — pinned Hugging Face revision plus the exact data bytes published in `data/`, each verified against its SHA-256 before anything is trained — so it reproduces the measured report from any machine, including regions where Binance's API is blocked.
 - **Results:** `docs/report.json` contains every held-out prediction, metrics, splits, coverage and uncertainty. `artifacts/coefficients.json` contains safe JSON model parameters; no pickled estimator is needed.
 
 ## Who this is for
