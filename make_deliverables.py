@@ -1,0 +1,148 @@
+"""Generate human-readable results and a self-contained Colab notebook from real artifacts."""
+import json
+from pathlib import Path
+import subprocess
+
+ROOT = Path(__file__).resolve().parent
+report = json.loads((ROOT / "docs/report.json").read_text())
+meta = report["meta"]
+rows = report["metrics"]
+metrics = "\n".join(f"| {m['name']} | {m['accuracy']:.2%} | {m['balanced_accuracy']:.2%} | {m['brier']:.4f} |" for m in rows)
+coverage = "\n".join(f"| {c['coin']} | {c['eligible_posts']} | {c['days_with_posts']} |" for c in report["coverage"])
+curve = "\n".join(f"| {c['train_dates']} | {c['validation_brier']:.4f} |" for c in report["learning_curve"])
+u = report["uncertainty"]
+readme = f'''# HypeCheck — Signal or Noise?
+
+**AI + Finance · Veritas AI Hackathon 2026**
+
+Does X sentiment add predictive information beyond market history for DOGE, SHIB, PEPE, BONK and FLOKI?
+
+**Finding:** this fixed retrospective experiment does **not demonstrate improved forecasts from sentiment**. Market + X has a higher (worse) held-out Brier score than market-only; the exploratory date-block uncertainty interval crosses zero. This is a research demo, not an edge, a live signal or a trading strategy.
+
+- **Demo:** https://adeviwon.github.io/hypecheck/
+- **Colab:** open `HypeCheck.ipynb` in Google Colab, or upload that file. No account credentials are needed by this repository.
+- **Results:** `docs/report.json` contains every held-out prediction, metrics, splits, coverage and uncertainty. `artifacts/coefficients.json` contains safe JSON model parameters; no pickled estimator is needed.
+
+## Who this is for
+
+A beginner crypto investor encountering bullish posts and asking whether the hype deserves their trust. Select a historical coin/date, compare market-only and market-plus-X forecasts, then reveal the next UTC day's actual return. It helps question claims, not place orders.
+
+## Results — measured, not promised
+
+Test dates: **{meta['splits']['test'][0]} through {meta['splits']['test'][1]}**, {rows[0]['n']} coin-days across {rows[0]['n_dates']} shared UTC dates. Every method uses the same observations.
+
+| Method | Direction accuracy | Balanced accuracy | Brier error ↓ |
+|---|---:|---:|---:|
+{metrics}
+
+Social-minus-market Brier difference: **{u['mean_social_minus_market_brier']:.6f}**. Exploratory 95% interval **[{u['interval95'][0]:.6f}, {u['interval95'][1]:.6f}]** using 1,000 circular 7-day moving-block resamples with coins kept together by date. Negative favours sentiment. This is not a formal significance or profitability claim.
+
+Only **{report['subgroups']['with_observed_posts']['n']}** test coin-days had observed eligible posts. Absence from this archive does not imply no discussion on X. Subgroup and per-coin results are in the JSON; the pooled result must not be presented as five independent discoveries.
+
+## How it works
+
+1. Fetch a fixed Hugging Face dataset revision and verify its upstream LFS SHA-256. Keep original posts only, nonempty bounded text, exact supported ticker matches and earliest exact-text duplicates.
+2. Use conservative source availability `max(created_at, first_posted_at)` where the latter exists. At cutoff `t` (UTC midnight), aggregate only availability in `[t-24h, t)`. Retweets and quotes are excluded. Ticker attribution itself comes from the retrospectively curated source.
+3. Frozen `StephanAkkerman/FinTwitBERT-sentiment` yields bullish/bearish/neutral probabilities; daily sentiment is bullish minus bearish. The checkpoint is pinned, uses safe tensor weights, and runs without remote code. Text truncates at 128 tokens.
+4. Build continuous daily Binance spot **USDT** bars. Predict whether day-t `close/open - 1` is positive; flat means not-up. Market inputs are strictly lagged returns, volatility, range and volume change. Prices observed later in day t are labels only, never features.
+5. Pooled regularised logistic regressions share numeric features and coin identity. Train-only scaling/one-hot encoding. Fixed C candidates `(0.01, 0.1, 1.0)` selected using validation Brier. Decision threshold 0.5. No refit on validation. No test-driven feature or hyperparameter changes.
+
+Train: {meta['splits']['train'][0]} → {meta['splits']['train'][1]}. Validation: {meta['splits']['validation'][0]} → {meta['splits']['validation'][1]}. Test: {meta['splits']['test'][0]} → {meta['splits']['test'][1]}. Shared date boundaries, roughly 60/20/20; one adjacent date is purged at each boundary so training/validation target windows end strictly before the next partition.
+
+The experiment begins March 2024, after the pinned sentiment checkpoint was public in February 2024. This reduces one chronology risk but is not proof of an independently collected live backtest or an overlap-free pretraining corpus.
+
+## What we added beyond the suggested project
+
+A five-memecoin, original-post dataset; conservative source-availability alignment; a price-only vs attention-only-added vs sentiment-added ablation; a predeclared simple selection procedure; paired date-block uncertainty; historical replay with failures visible; and explicit sparse-coverage accounting. Do not claim we invented FinTwitBERT or logistic regression.
+
+## Usable social coverage after filtering
+
+Counts may exceed unique posts when one post mentions multiple coins. Some last-day posts fall outside the fixed label horizon.
+
+| Coin | Eligible original posts | Observation dates |
+|---|---:|---:|
+{coverage}
+
+## Did more training history help?
+
+These are validation-only comparisons using recent portions of the training window, not independent experiments or test-set tuning. More history had lower validation Brier in this run; arbitrary extra tweets are not guaranteed to help.
+
+| Training UTC dates | Validation Brier ↓ |
+|---|---:|
+{curve}
+
+## Run locally (Python 3.12)
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python pipeline.py --stage all
+python -m unittest -v test_pipeline.py test_web.py
+node docs/app.js --self-test
+python serve.py --port 8766
+```
+
+Open `http://127.0.0.1:8766`. The published dashboard requires no Python or inference server. Initial inference is CPU-capable and checkpoints progress after each batch. It may take several minutes depending on hardware. `python pipeline.py --stage data` only checks data; `--stage sentiment` resumes scoring. Cached `--stage train` reuses frozen sentiment scores.
+
+`requirements.txt` pins direct dependencies including patched setuptools. `requirements.lock.txt` records the tested full Python environment. The CPU PyTorch index is explicit; no paid API keys. Internet access is required for first downloads. Binance availability varies by region; the pipeline stops on errors and never substitutes fabricated market data.
+
+## Verification and security
+
+The Python tests cover lag invariance under future-price perturbation, source-availability bounds, tampered dataset rejection, missing price days, chronological purges, exact recomputed metrics, JSON coefficient prediction parity and HTTP isolation. Node tests cover cutoff/date/availability boundaries and absent values. Browser replay is also exercised against the actual generated report.
+
+Read `SECURITY.md`. Public hosting serves only static files; no trading, uploads, secrets, account connection or arbitrary URL fetches. A restrictive CSP and safe DOM rendering reduce XSS risk. Header capabilities differ between local preview and GitHub Pages. Dependency auditing is not proof of absence of vulnerabilities, and the CPU PyTorch build is separately identified when the auditor cannot resolve it.
+
+## Limitations and failures
+
+''' + "\n".join("- " + item for item in meta["limitations"]) + '''
+
+The model sometimes confidently forecasts the wrong direction. The UI supports every test date, not just successful examples. No user interviews or live deployment validation have been performed; do not claim them. With more time, collect a prospective, source-balanced stream and evaluate on a genuinely new future period.
+
+**This project is a prototype and is not financial advice.**
+
+## Credits and sources
+
+- Dataset: https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto (MIT; fixed revision and SHA in `pipeline.py`).
+- Pretrained model: https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment (MIT), Stephan Akkerman and Tim Koornstra. Their language model and sentiment work are reused, not our invention.
+- Price data and field definitions: https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#klinecandlestick-data . Binance market data is not relicensed as our code.
+- Libraries: PyTorch, Hugging Face Transformers, safetensors, scikit-learn, pandas, NumPy, PyArrow and Requests. Library licenses remain their own.
+- Evaluation guidance: https://scikit-learn.org/stable/common_pitfalls.html .
+- AI tools: Hermes Agent/OpenAI coding assistance was used for research, implementation, review and testing. The team must understand and explain all code and results before submission.
+- Hackathon rules: https://highschoolhackathon.org/briefs.html . Add the three team members' actual names in the submission form; this repository does not invent identities.
+
+Code is MIT licensed. Third-party posts, model weights, market data and libraries retain their original terms.
+'''
+(ROOT / "README.md").write_text(readme)
+freeze = subprocess.run(["uv", "pip", "freeze", "--python", str(ROOT / ".venv/bin/python")], capture_output=True, text=True, check=True).stdout
+(ROOT / "requirements.lock.txt").write_text("--extra-index-url https://download.pytorch.org/whl/cpu\n" + freeze)
+
+
+def md(source):
+    return {"cell_type": "markdown", "metadata": {}, "source": source.splitlines(True)}
+
+
+def code(source):
+    return {"cell_type": "code", "metadata": {}, "execution_count": None, "outputs": [], "source": source.splitlines(True)}
+
+notebook = {"nbformat": 4, "nbformat_minor": 5, "metadata": {
+    "colab": {"name": "HypeCheck.ipynb"}, "kernelspec": {"name": "python3", "display_name": "Python 3", "language": "python"},
+    "language_info": {"name": "python"}}, "cells": [
+    md("# HypeCheck — Signal or Noise?\n\n" + "Does X sentiment improve next-day direction forecasts for five memecoins beyond market history?\n\n" +
+       "**This is the complete CPU-capable experiment, not the earlier audit-only starter.** It downloads pinned public posts and a fixed historical price horizon, scores original posts with frozen FinTwitBERT, and evaluates logistic regressions on later unseen dates. No paid API or Google account credentials are needed.\n\n" +
+       "Keep the test period untouched: do not tune to improve the published test score. Our measured run did not demonstrate an advantage from sentiment. Read the code and methods before presenting.\n\nThis project is a prototype and is not financial advice.\n"),
+    code("%pip -q install " + " ".join(line for line in (ROOT / "requirements.txt").read_text().splitlines() if not line.startswith("--")) + " --extra-index-url https://download.pytorch.org/whl/cpu\n"),
+    md("## 1. Experiment source\nThe next cell writes the actual pipeline, including pinned revisions, timestamp rules, lagged features, selection grid, tests-period boundaries and metrics. No remote Python code is executed from the dataset or model repository.\n"),
+    code("%%writefile pipeline.py\n" + (ROOT / "pipeline.py").read_text()),
+    md("## 2. Execute the experiment\nCPU inference may take several minutes. Progress is saved after every batch; rerun this cell to resume after interruption. Network or data-validation errors stop the run rather than producing made-up results.\n"),
+    code("!python pipeline.py --stage all --batch-size 16\n"),
+    md("## 3. Inspect the real results\nA small direction-accuracy difference is not a trading edge. Compare probability error, uncertainty and per-coin support too.\n"),
+    code("import json\nfrom pathlib import Path\nimport pandas as pd\nreport = json.loads(Path('docs/report.json').read_text())\ndisplay(pd.DataFrame([{k:v for k,v in row.items() if k != 'per_coin'} for row in report['metrics']]))\ndisplay(pd.DataFrame(report['coverage']))\nprint(report['uncertainty'])\nprint(report['meta']['splits'])\n"),
+    md("## 4. Run the leakage and artifact checks\nThe tests use the real generated data and predictions.\n"),
+    code("%%writefile test_pipeline.py\n" + (ROOT / "test_pipeline.py").read_text()),
+    code("!python -m unittest -v test_pipeline.py\n"),
+    md("## 5. Optional: download your report\nYour Google Colab session is separate from Hermes. This notebook does not connect your Google account or expose its credentials.\n"),
+    code("# Uncomment in Google Colab to download the measured report.\n# from google.colab import files\n# files.download('docs/report.json')\n"),
+]}
+(ROOT / "HypeCheck.ipynb").write_text(json.dumps(notebook, indent=2))
+print("Generated README.md, requirements.lock.txt and full HypeCheck.ipynb from measured artifacts.")
