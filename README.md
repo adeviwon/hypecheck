@@ -129,7 +129,9 @@ The Python tests cover lag invariance under future-price perturbation, source-av
 
 Read `SECURITY.md`. Public hosting serves only static files; no trading, uploads, secrets, account connection or arbitrary URL fetches. A restrictive CSP and safe DOM rendering reduce XSS risk. Header capabilities differ between local preview and GitHub Pages. Dependency auditing is not proof of absence of vulnerabilities, and the CPU PyTorch build is separately identified when the auditor cannot resolve it.
 
-## Limitations and failures
+### Would better data fix this?
+
+Tested after the run was frozen; it changed nothing about the model or the selection. Coverage is the binding constraint and raising it moves the headline the wrong way — sentiment exists on 14.7% of test days (142 of 965) and lowers accuracy on exactly those days, so `0.147 x 42.96 + 0.853 x 54.80 = 53.06%`, the reported figure. More posts per day and stronger sentiment behave the same (1 post: 52.5% -> 44.3%, n=122; |sentiment| >= 0.6: 47.5% -> 43.6%, n=101). Spearman rho of sentiment against next-day return is train +0.076 (p=0.070), validation -0.180 (p=0.335), test -0.027 (p=0.733) — no monotone relationship for more data to sharpen. The one relationship that reached p<0.05 (|sentiment| vs next-day range on test, rho +0.196) flipped sign across the other periods, so it is reported as a false positive rather than a lead. On direction accuracy market-only beats the training-majority rule by 0.21 points; on Brier it is 46.7% better (0.2481 vs 0.4653). The value is calibrated uncertainty, not direction.## Limitations and failures
 
 - Selected influencers are not representative of all X. Missing observations do not mean no discussion occurred.
 - Sparse and changing coverage; author/source changes can mimic sentiment effects. No causal claim.

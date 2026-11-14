@@ -558,10 +558,51 @@ Coverage, which is the real constraint:
 - The archive's ticker tags are retrospective curation, so we cannot prove the tag was right at the time.
 - Sentiment here means "text about this coin", never "this coin will rise".
 
+### Would better data fix this?
+The obvious objection is that our source is thin. We tested it directly **after** the run was frozen —
+nothing below changed the model, the features or the selection, and we report it as a post-hoc diagnostic.
+
+Coverage is the binding constraint, and raising it moves the headline the wrong way:
+
+| Test coin-days | n | Market only | Market + X |
+|---|---:|---:|---:|
+| Had eligible posts | 142 | 51.41% | **42.96%** |
+| No eligible posts | 823 | 54.07% | 54.80% |
+
+Pooled: `0.147 x 42.96 + 0.853 x 54.80 = 53.06%` — exactly the figure above. Sentiment exists on 14.7% of
+test days and lowers accuracy on precisely those days, so giving every day posts would push the pooled
+number toward **43%**, not up.
+
+More posts per day, and stronger sentiment, behave the same way:
+
+| Slice of the 142 rows with posts | n | Market only | Market + X |
+|---|---:|---:|---:|
+| Exactly 1 post | 122 | 52.5% | 44.3% |
+| 2 posts | 11 | 54.5% | 36.4% |
+| \|sentiment\| 0–0.25 | 16 | 68.8% | 37.5% |
+| \|sentiment\| 0.25–0.6 | 25 | 56.0% | 44.0% |
+| \|sentiment\| 0.6–1.0 | 101 | 47.5% | 43.6% |
+
+There is no monotone relationship for more data to sharpen — Spearman rho of sentiment against next-day
+return: train **+0.076** (p=0.070, n=549), validation **−0.180** (p=0.335, n=30), test **−0.027** (p=0.733,
+n=143). One relationship did reach p<0.05: |sentiment| against next-day high-low range on the test set
+(rho +0.196). It flipped sign on train (−0.064) and validation (−0.201), so we treat it as a false positive
+rather than a lead, and we are flagging it here rather than quietly keeping the one that looked good.
+
+The honest reading: **this is not a data-volume problem.** Next-day direction of a liquid, heavily watched
+asset is close to what public posts cannot tell you, and a larger archive of the same kind of posts would
+sharpen a number that already sits next to a coin flip.
+
+One calibration we owe a reader. On direction accuracy, market-only beats the trivial "always predict the
+training majority" rule by **0.21 points** (53.68% vs 53.47%). Where it genuinely earns its keep is
+probability error: Brier **0.2481** against the same baseline's 0.4653 — **46.7% lower**. The model's value
+is calibrated uncertainty, not direction, and the interface says so on its face.
+
 ### What we'd do next
 1. Collect a prospective, source-balanced stream instead of a retrospective archive, and evaluate on a
    genuinely later period, with the sentiment model fine-tuned on memecoin language.
-2. Classify each post's *intent* — directional call vs sector news vs promotion — before scoring it.
+2. Label a few hundred posts by hand for *intent* — directional call, sector news, promotion, factual —
+   rather than trusting the archive's retrospective ticker tags, then use those labels to score posts
    Our failure analysis says that is where most of the error lives.
 3. Report a cost-sensitive measure, because a missed move and a false alarm cost a beginner very
    differently.
