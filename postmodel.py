@@ -41,7 +41,10 @@ def load(data_dir):
     A = p.groupby(["coin","date"]).agg(
         n_posts=("coin","size"), n_authors=("auth","nunique"), author_known=("known","mean"),
         **{f"s_{c}": (c,"sum") for c in FLAGS},
-        **{f"m_{c}": (c,"mean") for c in MEANS}).reset_index()
+        **{f"m_{c}": (c,"mean") for c in MEANS},
+        lex_net=("lex_net","mean"), lex_bull=("lex_bull","mean"), lex_bear=("lex_bear","mean"),
+        lex_hype=("lex_hype","mean"), lex_hype_max=("lex_hype","max"),
+        lex_hit=("lex_net", lambda s: float((s != 0).mean()))).reset_index()
     for c in FLAGS:
         A[f"share_{c}"] = A[f"s_{c}"] / A["n_posts"]
     A["log_posts"] = np.log1p(A.n_posts)
@@ -62,7 +65,7 @@ def load(data_dir):
     # (64% of rows carry no author). Impute 0 and keep author_known in the model so the
     # learner can tell "no known author" from "an author with a zero". polarity is also
     # undefined for empty text. Both are flagged in the write-up, not silently hidden.
-    blocks = [c for c in ALLF + OURSENT if c in M.columns]
+    blocks = [c for c in ALLF + LEX + OURSENT if c in M.columns]
     M[blocks] = M[blocks].astype(float).fillna(0.0)
     return M, p
 
@@ -72,6 +75,7 @@ EXTRA   = ["btc_ret1","btc_ret7","hourly_vol1","hourly_range1","last_hour_ret","
 POSTVOL = ["log_posts","n_posts","n_authors","top_author_share"]
 WORDS   = ["polarity","m_word_count","m_caps_share"] + [f"share_{c}" for c in FLAGS]
 AUTHOR  = ["author_known","m_prior_author_posts_30d","m_prior_author_active_days_30d"]
+LEX     = ["lex_net","lex_bull","lex_bear","lex_hype","lex_hype_max","lex_hit"]
 OURSENT = ["sentiment","disagreement","bullish","bearish","post_count","has_posts"]
 ALLF    = MK + TREND + EXTRA + POSTVOL + WORDS + AUTHOR
 
@@ -81,7 +85,8 @@ LADDER = [("market (6)", MK),
           ("+ post volume (4)", MK + TREND + EXTRA + POSTVOL),
           ("+ the words used (12)", MK + TREND + EXTRA + POSTVOL + WORDS),
           ("+ author behaviour (3)", ALLF),
-          ("+ FinTwitBERT sentiment (6)", ALLF + OURSENT)]
+          ("+ hype lexicon (6)", ALLF + LEX),
+          ("+ FinTwitBERT sentiment (6)", ALLF + LEX + OURSENT)]
 
 def model(kind, seed=0):
     if kind == "dummy":
@@ -205,7 +210,8 @@ def main():
           f"  |  posts with a known author: {p.author_known.sum()} ({p.author_known.mean():.1%})")
     print(f"  feature blocks: market {len(MK)} + trend {len(TREND)} + btc/intraday {len(EXTRA)}"
           f" + post volume {len(POSTVOL)} + words {len(WORDS)} + author {len(AUTHOR)}"
-          f"  =  {len(ALLF)} model features (+{len(OURSENT)} FinTwitBERT in the last row)")
+          f" + hype lexicon {len(LEX)}  =  {len(ALLF)+len(LEX)} model features"
+          f" (+{len(OURSENT)} FinTwitBERT in the last row)")
 
     flat, chrono, folds, cut = make_splits(M)
     ra = show(flat[0], flat[1], "SPLIT A - flat random 80/20 (the split to distrust)")
@@ -219,7 +225,7 @@ def main():
 
     rb = show(chrono[0], chrono[1], f"SPLIT B - chronological 80/20, 1-day purge (cut {cut.date()})")
     rc = show_walk(folds)
-    ctrl = controls(folds, ALLF, "all post+market features")
+    ctrl = controls(folds, ALLF + LEX, "all post+market features + hype lexicon")
 
     a_best = max(ra.items(), key=lambda t: t[1]["gbm_acc"])
     b_best = max(rb.items(), key=lambda t: t[1]["gbm_acc"])

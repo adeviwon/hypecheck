@@ -32,7 +32,7 @@ POSTMODEL = (ROOT / "postmodel.py").read_text()
 
 FILES = ("posts.parquet", "market-hourly.csv", "expanded-daily.csv", "independent-post-scores.csv",
          "DOGE-prices.csv", "SHIB-prices.csv", "PEPE-prices.csv", "BONK-prices.csv", "FLOKI-prices.csv",
-         "post-features-anon.csv")
+         "post-features-anon.csv", "hype-lexicon.csv")
 SHA = {name: digest(ROOT / "data" / name) for name in FILES}
 SIZE = {name: (ROOT / "data" / name).stat().st_size for name in FILES}
 
@@ -467,7 +467,7 @@ md("""
 ## 6 · The richer post-level model — who said it, how they said it, and why the 80/20 flatters it
 
 Section 4 asks whether sentiment predicts direction. This section asks the question a judge should ask
-next: **does more specific data help?** We rebuild the model on 34 features in six blocks.
+next: **does more specific data help?** We rebuild the model on 40 features in seven blocks.
 
 | Block | Features | n |
 |---|---|---|
@@ -477,6 +477,7 @@ next: **does more specific data help?** We rebuild the model on 34 features in s
 | Post volume | posts per coin-day, log posts, distinct authors, top-author share | 4 |
 | **The words used** | bullish, bearish, urgency, extreme claim, promotion, evidence, uncertainty, exclamations, external link, polarity, word count, CAPS share | 12 |
 | **Who posted it** | author known, prior-30-day post count, prior-30-day active days | 3 |
+| **Hype lexicon** | net bull-minus-bear word count, bull count, bear count, mean and max hype-meter score, share of posts matched | 6 |
 
 Two limits, stated up front rather than buried, because each one costs a feature a judge might expect:
 
@@ -500,20 +501,64 @@ Then three splits, because here **the split decides the answer**:
 Two controls decide whether any gain is real: **label permutation** (destroy the training labels, keep
 everything else) and a **feature placebo** (shuffle the post columns across rows, keep the labels).
 
+### The hype meter — 234 curated words and phrases, measured against the corpus
+
+You asked for something specific: label each post hype, bullish or bearish from its actual word choice,
+name the words, and rate each one on a hype meter. `data/hype-lexicon.csv` is that artefact, and the
+honest version of it is more interesting than a clean table would have been.
+
+Method: curate the vocabulary (234 memecoin words, phrases and emojis), then **measure every entry against
+the corpus** instead of trusting it. Two independent yardsticks:
+
+- **bull / bear** — the share of posts containing the term that the *replication bundle's own* independent
+  lexicon flagged as bullish or bearish.
+- **hype meter (0–100)** — the share of posts containing the term that carry an independent hype marker:
+  an exclamation mark, 30% or more capitals, a promotion flag, urgency, or an extreme claim. Corpus
+  baseline: **16.1%**.
+
+| Outcome of measurement | Terms |
+|---|---|
+| Validated by the corpus | 9 |
+| Weak | 24 |
+| Hype-only (direction-neutral) | 28 |
+| Too rare to judge (n < 5) | 97 |
+| **Never appears in the corpus** | **67** |
+| Contradicted by the corpus | 9 |
+
+Three findings that matter more than the table:
+
+1. **The classic hype vocabulary is not in this data.** `to the moon`, `100x`, `rugpull`, `guaranteed`,
+   `lambo`, `rekt` — 67 curated terms never appear once. This corpus is not retail shilling; it is
+   technical-analysis commentary from 49 accounts.
+2. **The hype meter does not measure hype.** Spearman between our post-level hype score and the
+   independent hype markers is **+0.012** — zero. Every term scoring near 100 appears in a handful of
+   posts, and each traces back to one account's ALL-CAPS ticker lists. In this corpus, hype lives in
+   formatting, not vocabulary.
+3. **The direction lexicon does work, moderately.** It agrees with the bundle's independent lexicon on
+   **105 of the 145** posts where that lexicon fires (72%), Spearman on net bull-minus-bear intensity is
+   **+0.41**, and it covers **30.8%** of posts against the bundle's **11.4%** — nearly three times the
+   reach, from the same corpus.
+
+Fed into the model as a seventh block, the lexicon is the first feature set to move the walk-forward AUC
+clear of both controls: **0.5627** against a label-permutation null of 0.499 ± 0.023 (the real value sits
+above all 20 draws) and a feature placebo of 0.514 ± 0.014. That is the strongest signal this project has
+found — and it is still only AUC 0.56 across 460 out-of-sample coin-days, still beating its majority
+baseline in 1 of 4 forward windows. Promising is not tradeable, and we are not going to pretend otherwise.
+
 Measured by the next two cells:
 
 | Split | Best block | Accuracy | Edge over majority class | AUC |
 |---|---|---|---|---|
-| A — flat 80/20 (leaky) | + FinTwitBERT sentiment | 0.6104 | **+9.01pp** | 0.6295 |
-| B — chronological 80/20 | + FinTwitBERT sentiment | 0.5598 | +4.83pp | 0.5696 |
-| C — walk-forward | + author behaviour | 0.5285 | — | 0.5530 |
+| A — flat 80/20 (leaky) | + the words used | 0.6014 | **+8.11pp** | 0.5995 |
+| B — chronological 80/20 | + hype lexicon | 0.5751 | +6.36pp | 0.5849 |
+| C — walk-forward | + FinTwitBERT sentiment | 0.5511 | — | 0.5687 |
 
 The flat split is the one that would win a pitch, and it is the one that lies. **The best walk-forward
-result sits 8.2 accuracy points below the best flat-split result**, because in a walk-forward the test rows
-stop sharing dates and authors with training. In the honest split the richest model beats its own majority
-baseline in **1 of 4** forward windows, and its AUC does not clear the label-permutation null printed by
-the control cell. Author behaviour adds the most of any single block (+2.5pp accuracy over the market-only
-model in the walk-forward, AUC 0.553 against 0.480) — and it is still not a durable edge.
+result sits 5.0 accuracy points below the best flat-split result**, because in a walk-forward the test rows
+stop sharing dates and authors with training. Even in the honest split the richest model beats its own
+majority baseline in only **2 of 4** forward windows. Author behaviour and the hype lexicon each add
+roughly 2.5pp accuracy over the market-only model in the walk-forward (AUC 0.553 and 0.563 against 0.480)
+— real movement, and still not a durable edge.
 
 So the answer to *would more specific data help?* is the same as section 5's, arrived at a second way: not
 as measured. What the extra data does buy is a demonstration of how a flat 80/20 split manufactures a
