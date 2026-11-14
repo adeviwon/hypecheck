@@ -9,7 +9,7 @@ function makeEl(tag) {
     replaceChildren(...nodes) { this.children = nodes; },
     setAttribute(key, value) { this.attributes[key] = value; },
     getAttribute(key) { return this.attributes[key]; },
-    addEventListener() {},
+    addEventListener(type, handler) { (this.listeners ??= {})[type] = handler; },
     classList: { add() {}, remove() {} },
   };
   return el;
@@ -19,6 +19,7 @@ const store = new Map(ids.map(id => [id, makeEl('div')]));
 globalThis.document = {
   getElementById: id => store.get(id) || null,
   createElement: makeEl,
+  createElementNS: (namespace, tag) => makeEl(tag),
 };
 globalThis.fetch = async () => ({ ok: true, json: async () => report });
 
@@ -43,4 +44,23 @@ const replayDate = store.get('date').children.length;
 const replayCoin = store.get('coin').children.length;
 assert.equal(replayCoin, 5, `coin options: ${replayCoin}`);
 assert.ok(replayDate > 100, `date options: ${replayDate}`);
+// The reveal control must reveal on demand and hide again, without disturbing the model numbers.
+const reveal = store.get('reveal');
+const outcome = store.get('outcome');
+const collect = (el, out = []) => {
+  if (!el || typeof el !== 'object') return out;
+  if (el.textContent) out.push(el.textContent);
+  (el.children || []).forEach(child => collect(child, out));
+  return out;
+};
+const marketBefore = store.get('market-prob').textContent;
+reveal.checked = false;
+reveal.listeners.change();
+assert.equal(outcome.textContent, 'Outcome hidden. Make your own assessment first.');
+reveal.checked = true;
+reveal.listeners.change();
+const revealed = collect(outcome).join(' ');
+assert.match(revealed, /Realized next-24h return/, `revealed outcome text: ${revealed}`);
+assert.equal(store.get('market-prob').textContent, marketBefore, 'revealing must not change the reported probabilities');
+assert.equal(store.get('actual-key').hidden, false, 'the actual-direction legend must appear only when revealed');
 console.log(`DOM smoke passed: ${metricRows.length} primary rows, ${extendedRows.length - 1} extended rows, ${replayCoin} coins, ${replayDate} dates.`);

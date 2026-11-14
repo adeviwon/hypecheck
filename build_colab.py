@@ -480,8 +480,10 @@ next two cells write `test_pipeline.py` and run it. These are adversarial tests,
   `artifacts/coefficients.json` are re-scored against the published predictions, so the numbers are
   checkable without unpickling anything — we ship no pickles at all.
 
-The published dashboard in `docs/` reads the same `docs/report.json`, so the interface cannot drift
-from the measured results.
+Beyond the Python gates, the dashboard's own DOM test renders the real `docs/report.json` through
+`docs/app.js` and asserts both result tables, the coin and date controls, and that the reveal control
+switches from hidden to revealed without altering a single reported probability. The published
+dashboard reads the same `docs/report.json`, so the interface cannot drift from the measured results.
 """)
 
 code("%%writefile test_pipeline.py\n" + TESTS)
