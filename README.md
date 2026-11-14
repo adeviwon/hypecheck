@@ -31,12 +31,45 @@ Social-minus-market Brier difference: **0.001065**. Exploratory 95% interval **[
 
 Only **142** test coin-days had observed eligible posts. Absence from this archive does not imply no discussion on X. Subgroup and per-coin results are in the JSON; the pooled result must not be presented as five independent discoveries.
 
+### Secondary comparison — richer market context
+
+Hourly Binance bars and BTC/USDT context were added **after** the primary run was frozen. They are reported separately, on the same 965 held-out rows, and were not used to select the primary models.
+
+| Method | Direction accuracy | Balanced accuracy | Brier error ↓ |
+|---|---:|---:|---:|
+| Market only (primary) | 53.68% | 51.50% | 0.2481 |
+| Market + X (primary) | 53.06% | 51.23% | 0.2491 |
+| Market + BTC + intraday | 50.26% | 48.80% | 0.2495 |
+| Market + BTC + intraday + X | 49.53% | 48.39% | 0.2504 |
+
+Intraday features are the previous UTC day's hourly return volatility, high-low range, final-hour return and taker-buy share — each computed only from hourly bars that closed before the cutoff. BTC context is a lagged 1-day and 7-day return.
+
+Richer market inputs made the market baseline **worse**, not better, and sentiment still did not help: sentiment-minus-richer-market Brier difference **0.000926**, exploratory 95% interval **[-0.000196, 0.002227]**, again crossing zero. Two feature sets, one conclusion.
+
+### Independent scoring check
+
+The same posts were scored a second time by a separately produced pass using a **different pinned revision** of the same model (`c079da76…` rather than `da059da3…`).
+
+| Check | Result |
+|---|---:|
+| Shared posts | 1,122 |
+| Same three-class label | 80.4% |
+| Same net-sentiment direction | 87.0% |
+| Mean absolute difference in P(bullish) | 0.219 |
+| Posts differing by more than 0.25 | 31.9% |
+
+Two revisions of the same checkpoint disagree on the direction of roughly one post in eight, and the disagreement is flat across text-length buckets (0.219 for short texts vs 0.221 for long ones), so truncation does not explain it. This is a reproducibility check, not a ground-truth accuracy measure — and it is a reason to treat single-post sentiment as fragile rather than authoritative.
+
+### Data we examined and rejected
+
+Two supplied files were profiled and **not** used. A 34,192-row post expansion collapses to 10,545 posts across only 92 dates inside the experiment window, about 14,000 of them in a single ten-day burst in April 2024, with 33 posts in 2025 and 25 in 2026 — and its in-window content is largely ticker spam and promotional bots. A 200,956-row, 306-asset training file has matched posts on only 2.2% of rows, almost all of them in training, and samples currently listed trading pairs. Neither would have added opinion-bearing memecoin posts to the test period, which is the real bottleneck.
+
 ## How it works
 
 1. Fetch a fixed Hugging Face dataset revision and verify its upstream LFS SHA-256. Keep original posts only, nonempty bounded text, exact supported ticker matches and earliest exact-text duplicates.
 2. Use conservative source availability `max(created_at, first_posted_at)` where the latter exists. At cutoff `t` (UTC midnight), aggregate only availability in `[t-24h, t)`. Retweets and quotes are excluded. Ticker attribution itself comes from the retrospectively curated source.
 3. Frozen `StephanAkkerman/FinTwitBERT-sentiment` yields bullish/bearish/neutral probabilities; daily sentiment is bullish minus bearish. The checkpoint is pinned, uses safe tensor weights, and runs without remote code. Text truncates at 128 tokens.
-4. Build continuous daily Binance spot **USDT** bars. Predict whether day-t `close/open - 1` is positive; flat means not-up. Market inputs are strictly lagged returns, volatility, range and volume change. Prices observed later in day t are labels only, never features.
+4. Build continuous daily Binance spot **USDT** bars. Predict whether day-t `close/open - 1` is positive; flat means not-up. Market inputs are strictly lagged returns, volatility, range and volume change. Prices observed later in day t are labels only, never features. The secondary comparison adds hourly-derived intraday features and BTC context, each lagged to the prior completed UTC day and asserted finite before use.
 5. Pooled regularised logistic regressions share numeric features and coin identity. Train-only scaling/one-hot encoding. Fixed C candidates `(0.01, 0.1, 1.0)` selected using validation Brier. Decision threshold 0.5. No refit on validation. No test-driven feature or hyperparameter changes.
 
 Train: 2024-03-01 → 2025-09-29. Validation: 2025-10-01 → 2026-04-10. Test: 2026-04-12 → 2026-10-21. Shared date boundaries, roughly 60/20/20; one adjacent date is purged at each boundary so training/validation target windows end strictly before the next partition.
@@ -78,6 +111,7 @@ python -m pip install -r requirements.txt
 python pipeline.py --stage all
 python -m unittest -v test_pipeline.py test_web.py
 node docs/app.js --self-test
+node test_dom.mjs
 python serve.py --port 8766
 ```
 
@@ -87,7 +121,7 @@ Open `http://127.0.0.1:8766`. The published dashboard requires no Python or infe
 
 ## Verification and security
 
-The Python tests cover lag invariance under future-price perturbation, source-availability bounds, tampered dataset rejection, missing price days, chronological purges, exact recomputed metrics, JSON coefficient prediction parity and HTTP isolation. Node tests cover cutoff/date/availability boundaries and absent values. Browser replay is also exercised against the actual generated report.
+The Python tests cover lag invariance under future-price perturbation, source-availability bounds, tampered dataset rejection, missing price days, hourly-gap rejection, hourly-feature lag correctness against hand-computed values, BTC lag and same-provider bar cross-checks, chronological purges, exact recomputed metrics for both the primary and secondary models, pinned secondary-source tamper rejection, primary-metric regression pinning, independent-scoring reproduction, JSON coefficient prediction parity and HTTP isolation. Node tests cover cutoff/date/availability boundaries, absent values and the extended report shape. `test_dom.mjs` renders the real report through `docs/app.js` against a stub DOM and asserts both result tables. Browser replay is also exercised against the actual generated report.
 
 Read `SECURITY.md`. Public hosting serves only static files; no trading, uploads, secrets, account connection or arbitrary URL fetches. A restrictive CSP and safe DOM rendering reduce XSS risk. Header capabilities differ between local preview and GitHub Pages. Dependency auditing is not proof of absence of vulnerabilities, and the CPU PyTorch build is separately identified when the auditor cannot resolve it.
 
@@ -100,6 +134,7 @@ Read `SECURITY.md`. Public hosting serves only static files; no trading, uploads
 - Sentiment is truncated to 128 tokens. Probabilities are not independently calibrated; sentiment certainty is not return certainty.
 - Historical USDT exchange bars exclude fees, slippage, latency and execution constraints; no profitability claim.
 - Only one held-out period. Date-block intervals are exploratory, and the final period must not be reused to tune models.
+- Two pinned revisions of the same sentiment checkpoint disagree on the direction of about 13% of shared posts, so these scores are model-revision dependent rather than a stable ground truth.
 
 The model sometimes confidently forecasts the wrong direction. The UI supports every test date, not just successful examples. No user interviews or live deployment validation have been performed; do not claim them. With more time, collect a prospective, source-balanced stream and evaluate on a genuinely new future period.
 
@@ -110,6 +145,8 @@ The model sometimes confidently forecasts the wrong direction. The UI supports e
 - Dataset: https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto (MIT; fixed revision and SHA in `pipeline.py`).
 - Pretrained model: https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment (MIT), Stephan Akkerman and Tim Koornstra. Their language model and sentiment work are reused, not our invention.
 - Price data and field definitions: https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#klinecandlestick-data . Binance market data is not relicensed as our code.
+- Hourly market bars and BTC context: Binance Vision spot klines, supplied in an independent HypeCheck data package. Attributed to Binance Vision under its dataset terms (https://github.com/binance/binance-public-data/blob/master/TERMS_AND_CONDITIONS.md) and CC BY-NC-SA 4.0. The daily rows were cross-checked bar-for-bar against our own Binance bars and matched exactly.
+- Independent sentiment-scoring pass: a second pinned FinTwitBERT revision (https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment/tree/c079da7618e551d182ffdf68ef7aa25cb9a79667), used only as a reproducibility check.
 - Libraries: PyTorch, Hugging Face Transformers, safetensors, scikit-learn, pandas, NumPy, PyArrow and Requests. Library licenses remain their own.
 - Evaluation guidance: https://scikit-learn.org/stable/common_pitfalls.html .
 - AI tools: Hermes Agent/OpenAI coding assistance was used for research, implementation, review and testing. The team must understand and explain all code and results before submission.

@@ -118,6 +118,103 @@ class PipelineChecks(unittest.TestCase):
         for filename, checksum in manifest["files"].items():
             self.assertEqual(checksum, p.digest(p.ROOT / filename))
 
+    def test_hourly_features_cannot_see_the_cutoff_day(self):
+        hourly = p.load_hourly("DOGE")
+        bars = pd.read_csv(p.ROOT / "data/market-hourly.csv")
+        bars = bars[bars.coin.eq("DOGE")].copy()
+        bars["open_time"] = pd.to_datetime(bars.open_time, utc=True)
+        prior = bars[bars.open_time.dt.date == pd.Timestamp("2024-04-10").date()].sort_values("open_time")
+        cutoff_day = hourly[hourly.date.eq(pd.Timestamp("2024-04-11", tz="UTC"))].iloc[0]
+        self.assertAlmostEqual(cutoff_day.hourly_vol1, np.log(prior.close_usdt / prior.open_usdt).std(ddof=1), places=12)
+        self.assertAlmostEqual(cutoff_day.last_hour_ret, np.log(prior.close_usdt.iloc[-1] / prior.open_usdt.iloc[-1]), places=12)
+        self.assertAlmostEqual(cutoff_day.taker_ratio1, prior.taker_buy_volume_usdt.sum() / prior.volume_usdt.sum(), places=12)
+        self.assertEqual(int(prior.open_time.dt.hour.max()), 23)
+        # The cutoff day's own hours must not appear anywhere in its features.
+        following = bars[bars.open_time.dt.date == pd.Timestamp("2024-04-11").date()]
+        self.assertNotAlmostEqual(cutoff_day.hourly_range1, (following.high_usdt.max() - following.low_usdt.min()) / following.close_usdt.iloc[-1], places=6)
+
+    def test_hourly_gap_fails_closed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "data").mkdir()
+            bars = pd.read_csv(p.ROOT / "data/market-hourly.csv")
+            bars = bars[bars.coin.eq("DOGE")].reset_index(drop=True).drop(index=100)
+            bars.to_csv(root / "data/market-hourly.csv", index=False)
+            with patch.object(p, "ROOT", root), patch.object(p, "HOURLY_SHA256", p.digest(root / "data/market-hourly.csv")):
+                with self.assertRaisesRegex(ValueError, "contiguous"):
+                    p.load_hourly("DOGE")
+
+    def test_pinned_secondary_sources_fail_closed(self):
+        for name, attribute, loader in [("market-hourly.csv", "HOURLY_SHA256", "load_hourly"),
+                                        ("expanded-daily.csv", "EXPANDED_SHA256", "load_btc")]:
+            with tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                (root / "data").mkdir()
+                (root / "data" / name).write_text("coin,tampered\n")
+                with patch.object(p, "ROOT", root), patch.object(p, attribute, "0" * 64):
+                    with self.assertRaisesRegex(ValueError, "SHA-256"):
+                        p.load_hourly("DOGE") if loader == "load_hourly" else p.load_btc()
+
+    def test_btc_context_is_lagged_and_matches_our_own_bars(self):
+        btc = p.load_btc()
+        self.assertGreater(len(btc), 1000)
+        self.assertTrue((btc.date.diff().dropna() == pd.Timedelta(days=1)).all())
+        tail = btc.dropna(subset=["btc_ret1", "btc_ret7"])
+        self.assertTrue(np.isfinite(tail[["btc_ret1", "btc_ret7"]].to_numpy(float)).all())
+        # The independent daily file must reproduce our own Binance bars exactly (checked inside load_btc).
+        ours = p.load_prices("DOGE")
+        merged = btc.merge(ours[["date", "close"]], on="date", how="inner")
+        self.assertGreater(len(merged), 900)
+
+    def test_extended_market_features_are_lagged_too(self):
+        prices = p.load_prices("DOGE")
+        frame = pd.read_csv(p.ROOT / "data/features.csv")
+        frame["date"] = pd.to_datetime(frame.date, utc=True)
+        self.assertTrue(np.isfinite(frame[p.MARKET_EXT].to_numpy(float)).all())
+        del prices
+        for coin in p.COINS:
+            hourly = p.load_hourly(coin)
+            joined = frame[frame.coin.eq(coin)].merge(hourly, on="date", how="inner", suffixes=("", "_source"))
+            self.assertEqual(len(joined), 965)
+            for column in p.INTRADAY:
+                np.testing.assert_allclose(joined[column].to_numpy(float), joined[column + "_source"].to_numpy(float), rtol=0, atol=0)
+            del joined, hourly
+
+    def test_primary_metrics_are_unchanged_by_the_extension(self):
+        report = json.loads((p.ROOT / "docs/report.json").read_text())
+        published = {"Always up": 0.465284974093264, "Training majority": 0.534715025906736,
+                     "Previous direction": 0.492227979274611, "Market only": 0.536787564766839,
+                     "Market + attention": 0.544041450777202, "Market + X": 0.530569948186528}
+        measured = {row["name"]: row["accuracy"] for row in report["metrics"]}
+        self.assertEqual(set(measured), set(published))
+        for name, value in published.items():
+            self.assertAlmostEqual(measured[name], value, places=12)
+
+    def test_extended_metrics_match_saved_predictions(self):
+        report = json.loads((p.ROOT / "docs/report.json").read_text())
+        rows = pd.DataFrame(report["predictions"])
+        pairs = [("Market + BTC + intraday", "extended_market_prob"),
+                 ("Market + BTC + intraday + X", "extended_social_prob")]
+        for name, column in pairs:
+            measured = p.scores(rows.actual_up, rows[column])
+            saved = next(x for x in report["extended"]["metrics"] if x["name"] == name)
+            for key in measured:
+                self.assertAlmostEqual(measured[key], saved[key], places=12)
+
+    def test_independent_scoring_check_is_reproducible(self):
+        report = json.loads((p.ROOT / "docs/report.json").read_text())
+        checked = report["independent_check"]
+        self.assertTrue(checked["available"])
+        self.assertNotEqual(checked["our_model_revision"], checked["independent_model_revision"])
+        self.assertEqual(checked["shared_posts"], 1122)
+        cache = json.loads((p.ROOT / "data/sentiment.json").read_text())["scores"]
+        other = pd.read_csv(p.ROOT / "data/independent-post-scores.csv", usecols=["post_id", "p_bullish"])
+        other["post_id"] = other.post_id.astype(str)
+        merged = other.drop_duplicates("post_id")
+        merged = merged[merged.post_id.isin([str(k) for k in cache])]
+        delta = np.abs([cache[k]["bullish"] - merged.loc[merged.post_id.eq(str(k)), "p_bullish"].iloc[0] for k in merged.post_id])
+        self.assertAlmostEqual(float(delta.mean()), checked["mean_abs_p_bullish_difference"], places=12)
+
     def test_empty_subgroup_and_invalid_probabilities(self):
         self.assertEqual(p.scores([], [])["n"], 0)
         self.assertIsNone(p.scores([], [])["accuracy"])

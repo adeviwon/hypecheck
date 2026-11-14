@@ -24,7 +24,7 @@
       seen.add(key);
       return true;
     }).sort((a, b) => a.date.localeCompare(b.date) || a.coin.localeCompare(b.coin));
-    return { meta, records, metrics: Array.isArray(raw.metrics) ? raw.metrics.filter(x => x && typeof x === 'object') : [], coverage: Array.isArray(raw.coverage) ? raw.coverage.filter(x => x && typeof x === 'object') : [], uncertainty: raw.uncertainty, learningCurve: raw.learning_curve, subgroups: raw.subgroups };
+    return { meta, records, metrics: Array.isArray(raw.metrics) ? raw.metrics.filter(x => x && typeof x === 'object') : [], coverage: Array.isArray(raw.coverage) ? raw.coverage.filter(x => x && typeof x === 'object') : [], uncertainty: raw.uncertainty, learningCurve: raw.learning_curve, subgroups: raw.subgroups, extended: raw.extended && typeof raw.extended === 'object' && !Array.isArray(raw.extended) ? raw.extended : null };
   }
   function eligibleExamples(row) {
     if (!utcTime(row.cutoff)) return [];
@@ -51,6 +51,9 @@
       assert.equal(eligibleExamples({ ...row, cutoff: null }).length, 0);
       assert.equal(parseReport({ meta: { splits: { test: ['2025-02-01', '2025-03-01'] } }, predictions: [row] }).records.length, 0);
       assert.equal(percent(null), 'Not reported');
+      assert.equal(parseReport({}).extended, null);
+      assert.equal(parseReport({ extended: 'nope' }).extended, null);
+      assert.equal(parseReport({ extended: { metrics: [{ name: 'x', accuracy: 0.5, n: 3, n_dates: 2 }] } }).extended.metrics.length, 1);
       assert.equal(parseReport({}).records.length, 0);
       assert.throws(() => parseReport(null));
       console.log('HypeCheck self-test passed: dates, deduplication, test split, cutoff and missing values.');
@@ -102,6 +105,44 @@
       analysis.append(node('p', 'These are validation-only comparisons of historical training windows, not proof that adding arbitrary posts improves future forecasts.', 'small muted'));
     }
     $('results-section').append(analysis);
+    const extendedHost = $('extended');
+    extendedHost.replaceChildren();
+    const extended = report.extended;
+    const extendedRows = extended && Array.isArray(extended.metrics) ? extended.metrics.filter(x => x && typeof x === 'object') : [];
+    if (extendedRows.length) {
+      extendedHost.append(node('h3', 'Declared secondary comparison'));
+      if (text(extended.note)) extendedHost.append(node('p', text(extended.note), 'muted'));
+      const wrap = node('div', undefined, 'table-wrap');
+      wrap.tabIndex = 0;
+      wrap.setAttribute('role', 'region');
+      wrap.setAttribute('aria-label', 'Secondary comparison using extended market features');
+      const table = node('table');
+      table.append(node('caption', 'Extended market features · same held-out rows · lower Brier score is better'));
+      const head = node('thead'); const header = node('tr');
+      ['Model', 'Accuracy', 'Balanced accuracy', 'Brier score', 'Observations', 'Dates'].forEach(label => { const th = node('th', label); th.scope = 'col'; header.append(th); });
+      head.append(header); table.append(head);
+      const tbody = node('tbody');
+      extendedRows.forEach(metric => {
+        const tr = node('tr');
+        const values = [text(metric.name) || 'Unnamed model', percent(metric.accuracy), percent(metric.balanced_accuracy), probability(metric.brier) ? metric.brier.toFixed(4) : '—', count(metric.n), count(metric.n_dates)];
+        values.forEach((value, index) => { const cell = node(index ? 'td' : 'th', value); if (!index) cell.scope = 'row'; tr.append(cell); });
+        tbody.append(tr);
+      });
+      table.append(tbody); wrap.append(table); extendedHost.append(wrap);
+      const primaryBaseline = extendedRows.find(x => text(x.name) === 'Market only (primary)');
+      const extendedBaseline = extendedRows.find(x => text(x.name) === 'Market + BTC + intraday');
+      if (primaryBaseline && extendedBaseline && probability(primaryBaseline.accuracy) && probability(extendedBaseline.accuracy)) {
+        extendedHost.append(node('p', extendedBaseline.accuracy > primaryBaseline.accuracy
+          ? 'Hourly bars and BTC context improved the market baseline on these rows.'
+          : 'Hourly bars and BTC context did not improve the market baseline on these rows.', 'small'));
+      }
+      const extendedUncertainty = extended.uncertainty;
+      if (extendedUncertainty && finite(extendedUncertainty.mean_social_minus_market_brier) && Array.isArray(extendedUncertainty.interval95) && extendedUncertainty.interval95.every(finite)) {
+        const [low, high] = extendedUncertainty.interval95;
+        extendedHost.append(node('p', `Sentiment minus richer-market Brier error: ${extendedUncertainty.mean_social_minus_market_brier.toFixed(4)}. Exploratory 95% date-block interval: ${low.toFixed(4)} to ${high.toFixed(4)}.`, 'small'));
+      }
+      extendedHost.append(node('p', 'These rows were added after the primary run was frozen and are reported separately; they were not used to select the primary models.', 'small muted'));
+    }
     const coverageHost = $('coverage');
     coverageHost.replaceChildren();
     if (coverage.length) {
@@ -129,6 +170,8 @@
     addProvenance('Source availability policy', meta.availability_policy);
     addProvenance('Eligible posts without collection timestamps', Number.isInteger(meta.eligible_posts_missing_collection_timestamp) ? String(meta.eligible_posts_missing_collection_timestamp) : 'Not reported');
     addProvenance('Target window', 'Daily UTC 00:00 → next 00:00; historical replay, not live forecasting.');
+    addProvenance('Extended market inputs', meta.hourly_market_source);
+    addProvenance('BTC context', meta.btc_context_source);
     ['train', 'validation', 'test'].forEach(split => {
       const range = meta.splits && meta.splits[split];
       addProvenance(`${split} dates`, Array.isArray(range) ? range.map(text).join(' → ') : 'Not reported');

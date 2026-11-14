@@ -24,12 +24,25 @@ DATASET_REV = "c4b17a94a667af3da1c9ed5144f998e3a4f29966"
 DATASET_SHA256 = "81b2f7563a44c1a103e9468a83d52319dfeae0fc616422b4a4df90d8d684b960"
 MODEL = "StephanAkkerman/FinTwitBERT-sentiment"
 MODEL_REV = "da059da3b3bbcb43f9ed1aeb5ae61644010c7e1e"
+# Declared secondary inputs, from the independent HypeCheck data package.
+# Both files are pinned by SHA-256 so a swapped or edited copy fails closed.
+HOURLY_FILE = "market-hourly.csv"
+HOURLY_SHA256 = "d6819bf4ff46c31c88d62130904e858deb0191125b2603910755feeba8cce003"
+EXPANDED_FILE = "expanded-daily.csv"
+EXPANDED_SHA256 = "2aab9bbe2c0d6782e04ec7902e3414ad564bc09eb35dccb802c75d45b2324935"
+INDEPENDENT_FILE = "independent-post-scores.csv"
+INDEPENDENT_SHA256 = "bb35778b88edeb9e0b11bc2ac9fba6068bf472614a48445eff447c79965e17a2"
+INDEPENDENT_MODEL_REV = "c079da7618e551d182ffdf68ef7aa25cb9a79667"
 COINS = ("DOGE", "SHIB", "PEPE", "BONK", "FLOKI")
 START = pd.Timestamp("2024-03-01", tz="UTC")  # after this checkpoint was public
 END = pd.Timestamp("2026-10-22", tz="UTC")  # exclusive, fixed historical horizon
 MARKET = ["ret1", "ret3", "ret7", "vol7", "range1", "volume_change"]
 ATTENTION = ["post_count", "has_posts"]
 SOCIAL = ATTENTION + ["sentiment", "disagreement", "bullish", "bearish"]
+# Every extended value is computed only from bars that closed BEFORE cutoff t.
+BTC = ["btc_ret1", "btc_ret7"]
+INTRADAY = ["hourly_vol1", "hourly_range1", "last_hour_ret", "taker_ratio1"]
+MARKET_EXT = MARKET + BTC + INTRADAY
 
 
 def atomic_json(path: Path, value):
@@ -192,6 +205,135 @@ def score_posts(posts, batch_size=16):
     return pd.DataFrame(records)
 
 
+def _read_pinned(name, sha256):
+    """Local pinned copies only. A missing or edited file fails closed."""
+    path = ROOT / "data" / name
+    if not path.exists():
+        return None
+    if digest(path) != sha256:
+        raise ValueError(f"{name} SHA-256 does not match the pinned copy")
+    return path
+
+
+def load_hourly(coin):
+    """Hourly Binance spot bars, aggregated to the completed day before each cutoff."""
+    if coin not in COINS:
+        raise ValueError("Unknown coin")
+    path = _read_pinned(HOURLY_FILE, HOURLY_SHA256)
+    if path is None:
+        raise ValueError(f"data/{HOURLY_FILE} is required; see README for the pinned source")
+    columns = ["coin", "open_time", "open_usdt", "high_usdt", "low_usdt", "close_usdt",
+               "volume_usdt", "taker_buy_volume_usdt"]
+    bars = pd.read_csv(path, usecols=columns)
+    bars = bars[bars.coin.eq(coin)].copy()
+    bars["open_time"] = pd.to_datetime(bars.open_time, utc=True, errors="coerce")
+    bars = bars.sort_values("open_time").reset_index(drop=True)
+    if bars.empty or bars.open_time.isna().any() or bars.open_time.duplicated().any():
+        raise ValueError(f"Invalid hourly index for {coin}")
+    if not bars.open_time.dt.minute.eq(0).all():
+        raise ValueError("Hourly bars must open on the hour")
+    if not (bars.open_time.diff().dropna() == pd.Timedelta(hours=1)).all():
+        raise ValueError(f"Hourly bars are not contiguous for {coin}; no silent interpolation")
+    values = bars[["open_usdt", "high_usdt", "low_usdt", "close_usdt", "volume_usdt",
+                   "taker_buy_volume_usdt"]].to_numpy(float)
+    if not np.isfinite(values).all() or (values[:, :4] <= 0).any() or (values[:, 4:] < 0).any():
+        raise ValueError("Non-finite or invalid hourly market data")
+    if (bars.high_usdt < bars[["open_usdt", "close_usdt", "low_usdt"]].max(axis=1)).any():
+        raise ValueError("Invalid hourly OHLC bounds")
+    if (bars.low_usdt > bars[["open_usdt", "close_usdt", "high_usdt"]].min(axis=1)).any():
+        raise ValueError("Invalid hourly OHLC bounds")
+    bars["day"] = bars.open_time.dt.floor("D")
+    bars["hour_ret"] = np.log(bars.close_usdt / bars.open_usdt)
+    grouped = bars.groupby("day")
+    daily = pd.DataFrame({
+        "hourly_vol1": grouped.hour_ret.std(ddof=1),
+        "hourly_range1": (grouped.high_usdt.max() - grouped.low_usdt.min()) / grouped.close_usdt.last(),
+        "last_hour_ret": grouped.hour_ret.last(),
+        "taker_ratio1": grouped.taker_buy_volume_usdt.sum() / grouped.volume_usdt.sum(),
+        "hours": grouped.size(),
+    })
+    daily = daily[daily.hours.eq(24)].drop(columns="hours")
+    if daily.empty:
+        raise ValueError(f"No complete UTC days of hourly bars for {coin}")
+    # A day's 23:00 bar closes at its own midnight, so it informs the NEXT cutoff.
+    daily.index = daily.index + pd.Timedelta(days=1)
+    return daily.reset_index(names="date")
+
+
+def load_btc():
+    """BTC/USDT daily context from the pinned independent market file."""
+    path = _read_pinned(EXPANDED_FILE, EXPANDED_SHA256)
+    if path is None:
+        raise ValueError(f"data/{EXPANDED_FILE} is required; see README for the pinned source")
+    frame = pd.read_csv(path, usecols=["utc_day", "coin", "open_usdt", "close_usdt", "btc_close_usdt"])
+    btc = frame[["utc_day", "btc_close_usdt"]].dropna().drop_duplicates("utc_day").copy()
+    btc["date"] = pd.to_datetime(btc.utc_day, utc=True, errors="coerce")
+    btc = btc.dropna(subset=["date"]).sort_values("date").reset_index(drop=True)
+    if btc.empty or btc.date.duplicated().any():
+        raise ValueError("Invalid BTC date index")
+    if not (btc.date.diff().dropna() == pd.Timedelta(days=1)).all():
+        raise ValueError("BTC daily series has gaps; no silent forward filling")
+    closes = btc.btc_close_usdt.to_numpy(float)
+    if not np.isfinite(closes).all() or (closes <= 0).any():
+        raise ValueError("Invalid BTC closes")
+    btc["btc_ret1"] = btc.btc_close_usdt.pct_change().shift(1)
+    btc["btc_ret7"] = btc.btc_close_usdt.pct_change(7).shift(1)
+    # Same-provider cross-check: the independent daily file must reproduce our own bars exactly.
+    for coin in COINS:
+        local = ROOT / "data" / f"{coin}-prices.csv"
+        if not local.exists():
+            continue
+        mine = pd.read_csv(local)
+        mine["date"] = pd.to_datetime(mine.date, utc=True)
+        theirs = frame[frame.coin.eq(coin)].copy()
+        theirs["date"] = pd.to_datetime(theirs.utc_day, utc=True, errors="coerce")
+        merged = mine.merge(theirs[["date", "open_usdt", "close_usdt"]], on="date", how="inner")
+        if merged.empty:
+            raise ValueError(f"No overlapping daily bars to cross-check for {coin}")
+        if not np.array_equal(merged.open.to_numpy(float), merged.open_usdt.to_numpy(float)):
+            raise ValueError(f"Independent daily opens disagree with our Binance bars for {coin}")
+        if not np.array_equal(merged.close.to_numpy(float), merged.close_usdt.to_numpy(float)):
+            raise ValueError(f"Independent daily closes disagree with our Binance bars for {coin}")
+    return btc[["date", "btc_ret1", "btc_ret7"]]
+
+
+def independent_check(scored):
+    """Agreement with a separately produced FinTwitBERT pass on a different pinned revision."""
+    path = _read_pinned(INDEPENDENT_FILE, INDEPENDENT_SHA256)
+    if path is None:
+        return {"available": False, "reason": f"data/{INDEPENDENT_FILE} is absent"}
+    other = pd.read_csv(path, usecols=["post_id", "coin", "p_bearish", "p_neutral", "p_bullish"])
+    other["post_id"] = other.post_id.astype(str)
+    other = other.drop_duplicates("post_id")
+    mine = scored[["tweet_id", "text", "bullish", "neutral", "bearish"]].copy()
+    mine["post_id"] = mine.tweet_id.astype(str)
+    merged = mine.merge(other, on="post_id", how="inner")
+    if merged.empty:
+        return {"available": False, "reason": "no shared post IDs"}
+    classes = ["bearish", "neutral", "bullish"]
+    ours = merged[classes].to_numpy(float).argmax(axis=1)
+    theirs = merged[["p_" + name for name in classes]].to_numpy(float).argmax(axis=1)
+    ours_net = merged.bullish.to_numpy(float) - merged.bearish.to_numpy(float)
+    theirs_net = merged.p_bullish.to_numpy(float) - merged.p_bearish.to_numpy(float)
+    delta = np.abs(merged.bullish.to_numpy(float) - merged.p_bullish.to_numpy(float))
+    length = merged.text.astype(str).str.len().to_numpy(float)
+    short, long = length <= 400, length > 400
+    return {"available": True, "our_model_revision": MODEL_REV,
+            "independent_model_revision": INDEPENDENT_MODEL_REV,
+            "shared_posts": int(len(merged)),
+            "class_agreement": float((ours == theirs).mean()),
+            "net_sentiment_sign_agreement": float((np.sign(ours_net) == np.sign(theirs_net)).mean()),
+            "mean_abs_p_bullish_difference": float(delta.mean()),
+            "max_abs_p_bullish_difference": float(delta.max()),
+            "share_p_bullish_differing_over_0_25": float((delta > 0.25).mean()),
+            "length_diagnostic": {
+                "mean_abs_difference_short_text": float(delta[short].mean()) if short.any() else None,
+                "mean_abs_difference_long_text": float(delta[long].mean()) if long.any() else None,
+                "note": "Disagreement is flat across text-length buckets, so truncation does not explain it.",
+            },
+            "note": "Independent scoring pass from a different pinned checkpoint revision. This is a reproducibility check, not a ground-truth accuracy measure."}
+
+
 def market_features(prices):
     out = prices.copy()
     returns = out.close.pct_change()
@@ -206,7 +348,7 @@ def market_features(prices):
     return out
 
 
-def build_dataset(posts, prices):
+def build_dataset(posts, prices, hourly, btc):
     frames = []
     examples = {}
     for coin in COINS:
@@ -215,13 +357,17 @@ def build_dataset(posts, prices):
         daily = group.agg(post_count=("tweet_id", "size"), sentiment=("sentiment", "mean"),
                           disagreement=("sentiment", "std"), bullish=("bullish", "mean"), bearish=("bearish", "mean"))
         daily["disagreement"] = daily.disagreement.fillna(0)
-        frame = market_features(prices[coin]).set_index("date").join(daily).reset_index()
+        frame = (market_features(prices[coin]).set_index("date").join(daily)
+                 .join(hourly[coin].set_index("date")).join(btc.set_index("date")).reset_index())
         frame["post_count"] = frame.post_count.fillna(0).astype(int)
         frame["has_posts"] = (frame.post_count > 0).astype(int)
         # Zero is an imputation only; has_posts distinguishes unobserved text from neutral.
         frame[SOCIAL] = frame[SOCIAL].fillna(0)
         frame["coin"] = coin
         frame = frame[(frame.date >= START) & (frame.date < END)].dropna(subset=MARKET)
+        # The primary row set stays exactly as published; extended inputs must be complete.
+        if not np.isfinite(frame[MARKET_EXT].to_numpy(float)).all():
+            raise ValueError(f"Extended market features are incomplete for {coin}; refusing to impute")
         for date, samples in group:
             examples[(coin, date.strftime("%Y-%m-%d"))] = [{
                 "text": r["text"][:700], "url": r["url"] if isinstance(r.get("url"), str) and r["url"].startswith(("https://twitter.com/", "https://x.com/")) else "",
@@ -229,7 +375,7 @@ def build_dataset(posts, prices):
             } for r in samples.sort_values("available_at").tail(3).to_dict("records")]
         frames.append(frame)
     dataset = pd.concat(frames).sort_values(["date", "coin"]).reset_index(drop=True)
-    if dataset.duplicated(["date", "coin"]).any() or not np.isfinite(dataset[MARKET + SOCIAL].to_numpy()).all():
+    if dataset.duplicated(["date", "coin"]).any() or not np.isfinite(dataset[MARKET_EXT + SOCIAL].to_numpy()).all():
         raise ValueError("Invalid feature table")
     return dataset, examples
 
@@ -291,8 +437,8 @@ def bootstrap_delta(test, market, social):
             "method": "1000 circular moving-block resamples of UTC dates, 7-day blocks; coins grouped by day; exploratory interval"}
 
 
-def fit_and_report(raw, posts, prices):
-    frame, examples = build_dataset(posts, prices)
+def fit_and_report(raw, posts, prices, hourly, btc):
+    frame, examples = build_dataset(posts, prices, hourly, btc)
     train, val, test = split_dates(frame)
     configurations = {"Market only": MARKET, "Market + attention": MARKET + ATTENTION, "Market + X": MARKET + SOCIAL}
     models, validation = {}, []
@@ -307,6 +453,23 @@ def fit_and_report(raw, posts, prices):
         models[name] = selected  # no refit on validation; final models see train only
         validation.append({"name": name, "selected_C": best_c, "brier": best_brier, "candidates": [{"C": c, "brier": score} for score, c, _ in candidates]})
     probabilities = {name: fitted.predict_proba(test)[:, 1] for name, fitted in models.items()}
+    # Declared secondary comparison: identical rows, identical protocol, richer market inputs.
+    extended_configurations = {"Market + BTC + intraday": MARKET_EXT,
+                               "Market + BTC + intraday + X": MARKET_EXT + SOCIAL}
+    ext_models, ext_validation = {}, []
+    for name, features in extended_configurations.items():
+        candidates = []
+        for c in (0.01, 0.1, 1.0):
+            fitted = classifier(features, c).fit(train, train.actual_up)
+            brier = brier_score_loss(val.actual_up, fitted.predict_proba(val)[:, 1])
+            candidates.append((float(brier), c, fitted))
+        best_brier, best_c, selected = min(candidates, key=lambda x: (x[0], x[1]))
+        ext_models[name] = selected
+        ext_validation.append({"name": name, "selected_C": best_c, "brier": best_brier,
+                               "candidates": [{"C": c, "brier": score} for score, c, _ in candidates]})
+    ext_probabilities = {name: fitted.predict_proba(test)[:, 1] for name, fitted in ext_models.items()}
+    EXT_BASE = "Market + BTC + intraday"
+    EXT_X = "Market + BTC + intraday + X"
     majority = int(train.actual_up.mean() >= 0.5)
     metric_rows = [metric("Always up", test, np.ones(len(test))),
                    metric("Training majority", test, np.full(len(test), majority, dtype=float)),
@@ -318,7 +481,9 @@ def fit_and_report(raw, posts, prices):
         prediction = {key: row[key] for key in ["coin", "actual_return", "actual_up", "post_count"]}
         prediction.update(date=date, cutoff=row["date"].isoformat(), target_end=(row["date"] + pd.Timedelta(days=1)).isoformat(),
                           market_prob=float(probabilities["Market only"][idx]), social_prob=float(probabilities["Market + X"][idx]),
-                          attention_prob=float(probabilities["Market + attention"][idx]), persistence=int(row["ret1"] > 0),
+                          attention_prob=float(probabilities["Market + attention"][idx]),
+                          extended_market_prob=float(ext_probabilities[EXT_BASE][idx]),
+                          extended_social_prob=float(ext_probabilities[EXT_X][idx]), persistence=int(row["ret1"] > 0),
                           examples=examples.get((row["coin"], date), []))
         prediction.update({key: float(row[key]) if row["post_count"] else None for key in ["sentiment", "bullish", "bearish"]})
         predictions.append(prediction)
@@ -339,6 +504,16 @@ def fit_and_report(raw, posts, prices):
     mask = test.post_count.to_numpy() > 0
     subgroup = {"with_observed_posts": {"n": int(mask.sum()), "metrics": [metric(name, test[mask], p[mask]) for name, p in probabilities.items()] if mask.any() else []},
                 "without_observed_posts": {"n": int((~mask).sum())}}
+    extended = {
+        "note": "Secondary comparison on the same held-out rows: does richer market context change the answer? Not used for selection.",
+        "features": {"BTC": BTC, "intraday": INTRADAY},
+        "validation": ext_validation,
+        "metrics": [metric("Market only (primary)", test, probabilities["Market only"]),
+                    metric("Market + X (primary)", test, probabilities["Market + X"])]
+                   + [metric(name, test, p) for name, p in ext_probabilities.items()],
+        "uncertainty": bootstrap_delta(test, ext_probabilities[EXT_BASE], ext_probabilities[EXT_X]),
+        "primary_uncertainty": bootstrap_delta(test, probabilities["Market only"], probabilities["Market + X"]),
+    }
     report = {
         "meta": {"project": "HypeCheck", "generated_at": datetime.now(timezone.utc).isoformat(),
                  "dataset": DATASET, "dataset_revision": DATASET_REV, "sentiment_model": MODEL, "sentiment_revision": MODEL_REV,
@@ -349,6 +524,9 @@ def fit_and_report(raw, posts, prices):
                  "eligible_posts_missing_collection_timestamp": int(posts.first_posted_at.isna().sum()),
                  "availability_policy": "Original posts only; max(created_at, first_posted_at) where available. Prior-day posts only.",
                  "target": "Positive Binance USDT open-to-close return during the next UTC day; flat counts as not up.",
+                 "hourly_market_source": "Binance Vision 1h spot klines from the pinned independent data package, aggregated only over UTC hours that closed before the cutoff.",
+                 "btc_context_source": "BTC/USDT daily closes from the pinned independent market file, cross-checked bar-for-bar against our own Binance daily bars.",
+                 "independent_scoring_revision": INDEPENDENT_MODEL_REV,
                  "limitations": [
                      "Selected influencers are not representative of all X. Missing observations do not mean no discussion occurred.",
                      "Sparse and changing coverage; author/source changes can mimic sentiment effects. No causal claim.",
@@ -357,11 +535,14 @@ def fit_and_report(raw, posts, prices):
                      "Sentiment is truncated to 128 tokens. Probabilities are not independently calibrated; sentiment certainty is not return certainty.",
                      "Historical USDT exchange bars exclude fees, slippage, latency and execution constraints; no profitability claim.",
                      "Only one held-out period. Date-block intervals are exploratory, and the final period must not be reused to tune models.",
+                     "Two pinned revisions of the same sentiment checkpoint disagree on the direction of about 13% of shared posts, so these scores are model-revision dependent rather than a stable ground truth.",
                  ]},
         "metrics": metric_rows, "coverage": coverage, "predictions": predictions,
         "validation": validation, "learning_curve": learning_curve, "subgroups": subgroup,
         "label_counts": {name: {coin: {"n": int(len(part[part.coin.eq(coin)])), "up": int(part.loc[part.coin.eq(coin), "actual_up"].sum())} for coin in COINS} for name, part in [("train", train), ("validation", val), ("test", test)]},
         "uncertainty": bootstrap_delta(test, probabilities["Market only"], probabilities["Market + X"]),
+        "extended": extended,
+        "independent_check": independent_check(posts),
     }
     atomic_json(ROOT / "docs" / "report.json", report)
     frame.to_csv(ROOT / "data" / "features.csv", index=False)
@@ -393,13 +574,16 @@ def main():
     raw, selected = load_posts()
     print(f"Source posts: {len(raw)}; eligible original deduplicated posts: {len(selected)}", flush=True)
     prices = {coin: load_prices(coin) for coin in COINS}
+    hourly = {coin: load_hourly(coin) for coin in COINS}
+    btc = load_btc()
     print("Price coverage:", {coin: len(p) for coin, p in prices.items()}, flush=True)
+    print("Hourly coverage:", {coin: len(h) for coin, h in hourly.items()}, "BTC context rows:", len(btc), flush=True)
     if args.stage == "data":
         return
     scored = score_posts(selected, args.batch_size)
     if args.stage == "sentiment":
         return
-    fit_and_report(raw, scored, prices)
+    fit_and_report(raw, scored, prices, hourly, btc)
 
 
 if __name__ == "__main__":

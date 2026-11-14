@@ -2,17 +2,20 @@
   "dataset_revision": "c4b17a94a667af3da1c9ed5144f998e3a4f29966",
   "model_revision": "da059da3b3bbcb43f9ed1aeb5ae61644010c7e1e",
   "seed": 42,
-  "code_sha256": "419f3e9e17fee193cb50c6ae6deaf13f1c21e5556b388674d0521bf1bd9424f8",
+  "code_sha256": "7c299c207c584912e01ed5d0f7113b7789261bcc5be0a319c5f9ae2dc9b925c4",
   "files": {
     "data/BONK-prices.csv": "18be2016111fa5fc051ba750ca21fa2c7a883ccdc80986f03ae23069a38fee02",
     "data/DOGE-prices.csv": "afc23a84c958279129a02a5e556db41218bcfaae2a403ff100f88d634f44f2c2",
     "data/FLOKI-prices.csv": "1348af136631c9b4167ea5656aeae5ff1ea567300ae8492a5e92fb81b314d82e",
     "data/PEPE-prices.csv": "024ecb4a9da72818a06d4b86e7d8f87c3c51359a97dab27962a73d5bd609702f",
     "data/SHIB-prices.csv": "6f65ac812bbcbde740ecf9b34120147fe786999ec67df8631508027a5afb719b",
-    "data/features.csv": "849d9260b1f914ac33aea6b1e4ea49b1a6b04d7d174c792f23698fd1a254d002",
+    "data/expanded-daily.csv": "2aab9bbe2c0d6782e04ec7902e3414ad564bc09eb35dccb802c75d45b2324935",
+    "data/features.csv": "7b851f6d9c383a8a9a19d88648613e7a044f2f23ae55c870e6b06ca9296d20f5",
+    "data/independent-post-scores.csv": "bb35778b88edeb9e0b11bc2ac9fba6068bf472614a48445eff447c79965e17a2",
+    "data/market-hourly.csv": "d6819bf4ff46c31c88d62130904e858deb0191125b2603910755feeba8cce003",
     "data/posts.parquet": "81b2f7563a44c1a103e9468a83d52319dfeae0fc616422b4a4df90d8d684b960",
     "data/sentiment.json": "6d0384b26bf2c3b41c6eeb7e9b5973ac7186b85db903c266871e8067624c7415",
-    "docs/report.json": "64327b1b0201aa8bf29987b1f4c53e336c509fac0aaf1391b7bcb5b820aade09",
+    "docs/report.json": "ff9c214192aba9db4c59d73555857aea31a1c0751e80a7715e131e24df182991",
     "artifacts/coefficients.json": "b64771e37cc7f2f43c670e8d21fcf53725b7f283fa7b3f603da363a9e1f030de"
   }
 }
