@@ -131,7 +131,33 @@ Read `SECURITY.md`. Public hosting serves only static files; no trading, uploads
 
 ### Would better data fix this?
 
-Tested after the run was frozen; it changed nothing about the model or the selection. Coverage is the binding constraint and raising it moves the headline the wrong way — sentiment exists on 14.7% of test days (142 of 965) and lowers accuracy on exactly those days, so `0.147 x 42.96 + 0.853 x 54.80 = 53.06%`, the reported figure. More posts per day and stronger sentiment behave the same (1 post: 52.5% -> 44.3%, n=122; |sentiment| >= 0.6: 47.5% -> 43.6%, n=101). Spearman rho of sentiment against next-day return is train +0.076 (p=0.070), validation -0.180 (p=0.335), test -0.027 (p=0.733) — no monotone relationship for more data to sharpen. The one relationship that reached p<0.05 (|sentiment| vs next-day range on test, rho +0.196) flipped sign across the other periods, so it is reported as a false positive rather than a lead. On direction accuracy market-only beats the training-majority rule by 0.21 points; on Brier it is 46.7% better (0.2481 vs 0.4653). The value is calibrated uncertainty, not direction.## Limitations and failures
+Tested after the run was frozen; it changed nothing about the model or the selection. Coverage is the binding constraint and raising it moves the headline the wrong way — sentiment exists on 14.7% of test days (142 of 965) and lowers accuracy on exactly those days, so `0.147 x 42.96 + 0.853 x 54.80 = 53.06%`, the reported figure. More posts per day and stronger sentiment behave the same (1 post: 52.5% -> 44.3%, n=122; |sentiment| >= 0.6: 47.5% -> 43.6%, n=101). Spearman rho of sentiment against next-day return is train +0.076 (p=0.070), validation -0.180 (p=0.335), test -0.027 (p=0.733) — no monotone relationship for more data to sharpen. The one relationship that reached p<0.05 (|sentiment| vs next-day range on test, rho +0.196) flipped sign across the other periods, so it is reported as a false positive rather than a lead. On direction accuracy market-only beats the training-majority rule by 0.21 points; on Brier it is 46.7% better (0.2481 vs 0.4653). The value is calibrated uncertainty, not direction.
+
+### Would more specific data fix it? (author, wording, hype, past trend)
+
+Asked and tested after the report was frozen: 40 features in seven blocks over the same 738 post-days, three ways of splitting. The split decides the answer.
+
+| Split | Best block | Accuracy | Edge over majority class |
+|---|---|---:|---:|
+| Flat random 80/20 | + the words used | 0.6014 | +8.11pp |
+| Chronological 80/20, 1-day purge | + hype lexicon | 0.5751 | +6.36pp |
+| Walk-forward, 4 windows, 460 out-of-sample coin-days | + FinTwitBERT sentiment | 0.5511 | 2 of 4 windows |
+
+The flat split is the one that flatters: 60.8% of its test rows share a calendar date with training rows and 99.6% of its test posts come from authors already seen in training. It manufactures roughly five accuracy points the walk-forward does not reproduce. Controls: the best walk-forward AUC (0.5596) clears a 20-draw label-permutation null (0.4991 +/- 0.0233, max 0.5526) and a feature placebo (0.5143 +/- 0.0143) - the first block in this project to do so - and it is still AUC 0.56 across 460 coin-days. Promising is not tradeable.
+
+No follower counts exist in this data. The only reach proxy is engagement, present on 177 of 1,274 posts and every one of them dated 2026-04-11 or later, so it would teach the model the calendar rather than the author. Excluded, and reported as excluded.
+
+### The hype meter - 234 curated words and phrases, measured
+
+`data/hype-lexicon.csv`. Curated memecoin bull/bear/hype vocabulary, then measured against the corpus rather than trusted. Each term carries the share of posts containing it that the independent replication lexicon flags bullish or bearish, and a hype meter (0-100) = the share of those posts carrying an independent hype marker (exclamation mark, 30% or more capitals, promotion, urgency, extreme claim), against a 16.1% corpus baseline.
+
+- **Validated bullish (7):** `bullish` (n=51, 100%), `breakout` (34, 100%), `send it` (10, 100%), `rally` (8, 100%), `pumping` (8, 100%), `bottoms` (6, 83%), `longs` (6, 50%).
+- **Validated bearish (2):** `breakdown` (7, 100%), `bearish` (7, 100%).
+- **Contradicted by the data (9):** `sold` is 62.5% bullish, `selling` 37.5%, `sell` 42.9%, `short` 30%, `downside` 40%, `lower` 29.4%, `downtrend` 20%, `buying` 28.6% bearish, `reclaim` 16.7% bearish. Naive bearish vocabulary is actively misleading here: this corpus talks about selling into strength.
+- **Never appears at all (67):** `to the moon`, `100x`, `rugpull`, `scam`, `rekt`, `lambo`, `guaranteed`, `yolo`, `moonshot`. This is technical-analysis commentary from 49 accounts, not retail shilling.
+- **The hype meter does not measure hype.** Spearman between the post-level hype score and the independent hype markers is +0.012. The direction lexicon, by contrast, agrees with the independent lexicon on 105 of the 145 posts where it fires (72%) and covers 30.8% of posts against 11.4% - nearly three times the reach, from the same corpus.
+
+## Limitations and failures
 
 - Selected influencers are not representative of all X. Missing observations do not mean no discussion occurred.
 - Sparse and changing coverage; author/source changes can mimic sentiment effects. No causal claim.
