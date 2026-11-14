@@ -1,72 +1,117 @@
 # HypeCheck — Signal or Noise?
 
-**Veritas AI International High School Hackathon 2026 · AI + Finance**
+**AI + Finance · Veritas AI International High School Hackathon 2026**
 
-Does archived X sentiment improve next-day forecasts beyond market history? **Not demonstrably in our test.** A research prototype, not a trading system.
+**Team:** Nathaniel Wong (model) · Aaden Yick (data) · Alastair Chu (demo and write-up) · Malvern College Hong Kong
 
-## Start here
-- **Submission notebook:** [Open in Colab](https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb). Run top to bottom; slow exploratory search is optional. Saved primary-run outputs are included.
-- **Approximately one-page write-up:** [WRITEUP.md](WRITEUP.md)
-- **Historical replay demo:** https://adeviwon.github.io/hypecheck/
-- **Readiness and experiment comparison:** [SUBMISSION_AUDIT.md](SUBMISSION_AUDIT.md)
-- **Demo script and form checklist:** [SUBMISSION.md](SUBMISSION.md)
+*This project is a prototype and is not financial advice.*
 
-## Concrete tweet tests
-[Read the complete real archived bearish-tweet ledger](tweet-tests/README.md): full texts, source links, fresh sentiment scores, frozen-model direction calls and correct/incorrect outcomes. This is an illustrative subset of already examined data, not a new independent accuracy claim.
+## The question
 
-## Measured results
-965 held-out coin-days across 193 shared UTC dates; earlier training/validation dates with one-day boundary purges. Lower Brier error is better.
+Do prior-day headline-style X posts tell us anything about the next UTC day’s direction for **DOGE, SHIB, PEPE, BONK and FLOKI**? These are original social posts, not newspaper headlines or a complete X feed.
 
-| Method | Accuracy | Brier error |
+**Answer: not reliably in this experiment.** The sentiment-feature model beats always-up and previous-day direction on point accuracy, but not the training-majority rule. Adding sentiment to market history does not demonstrate an improvement. Failed models do not prove prediction impossible.
+
+- **Colab:** https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb
+- **Demo:** https://adeviwon.github.io/hypecheck/headlines.html
+- **Report:** [`docs/headline-report.json`](docs/headline-report.json)
+- **Every forecast:** [`artifacts/headline-predictions.csv`](artifacts/headline-predictions.csv)
+
+## User and product
+
+A beginner crypto investor sees a bullish post and wonders whether to trust it. HypeCheck compares prior-information forecasts with simple rules and reveals what happened in a historical replay. It helps inspect claims, not place orders.
+
+## Test-period results
+
+**2026-04-12–2026-10-21: 965 coin-days across 193 UTC dates.** All methods use identical test rows.
+
+| Method | Accuracy | Brier error ↓ |
 |---|---:|---:|
 | Always up | 46.53% | 0.5347 |
+| Previous-day direction | 49.33% | 0.5067 |
 | Training majority | 53.47% | 0.4653 |
-| Previous direction | 49.22% | 0.5078 |
-| Training prevalence | 53.47% | 0.2491 |
+| Sentiment + coin | 52.95% | 0.2501 |
+| Coin only | 53.47% | 0.2491 |
 | Market only | 53.68% | 0.2481 |
-| Market + attention | 54.40% | 0.2480 |
-| Market + X | 53.06% | 0.2491 |
+| Market + sentiment | 53.06% | 0.2491 |
+| Training prevalence | 53.47% | 0.2491 |
 
-The primary comparison is market + X against market-only, not the best of many experiments. Its paired Brier difference is +0.001065, exploratory 95% date-block interval [−0.000159, +0.002483]. We do not demonstrate incremental value from sentiment. Only 142/965 test coin-days have eligible posts.
+Primary model: frozen pretrained FinTwitBERT sentiment features plus a trained logistic-regression classifier and coin identity. The encoder is **not fine-tuned** in this experiment. Coin-only and market-only ablations test whether text adds anything. Training prevalence is the appropriate constant-probability reference for Brier error.
 
-Training prevalence is the fair constant-probability baseline. The hard majority forecast is retained for accuracy, not used to claim calibration. Same-day correlations do not establish that posts cause price changes. No profitability or durable trading-edge claim is made.
+**Baseline correction:** previous-day direction is the preceding calendar UTC day’s **close > open**, matching the target. The archived original report/dashboard instead used previous close-to-close return; it is not this comparison.
 
-## Follow-up checks
+### Paired accuracy differences
 
-The replay opens on October 10, 2026 for DOGE, when adding the X features lowered the estimated up probability from 46.8% to 32.9%. DOGE rose 0.45%. The archive contains three eligible posts for this example.
+| Sentiment model minus baseline | Difference | Exploratory 95% interval |
+|---|---:|---|
+| Always up | +6.42 pp | [-3.21, +16.48] pp |
+| Previous-day direction | +3.63 pp | [-0.93, +8.09] pp |
+| Training majority | -0.52 pp | [-2.69, +1.76] pp |
+| Market only | -0.73 pp | [-4.56, +3.11] pp |
 
-A complete-calendar volatility recheck found mean absolute error of 2.678 percentage points for yesterday’s range, 2.757 for the market model, and 2.753 for market plus post count. The paired interval for adding count spans zero. Run `python vol_model.py` from the checkout to reproduce it. [Exploratory analyses](research/README.md)
+Intervals use paired seven-observed-date circular moving-block resamples, retaining coins together. Every interval above crosses zero.
 
-The published “Previous direction” baseline uses the prior close-to-close change. The forecast target uses the next open-to-close change. Using the prior open-to-close direction for persistence gives 49.33% on the same dates.
+A secondary expanding-window model scores **53.26%** over the same final dates. It is a robustness check, not independent replication. Per-window results are in the notebook and JSON.
 
-## Reproduce (Python 3.12)
-The self-contained Colab downloads and hash-checks all inputs, scores pinned FinTwitBERT, trains the models and runs tests. No paid API or project credentials.
+## Do some kinds of headline-style posts matter more?
+
+Fixed keyword buckets: events → promotion → technical → other. Post categories are mutually exclusive by rule priority; coin-day slices overlap. These are approximate rules, not human-validated semantic labels. Counts are post-coin incidences, not necessarily unique tweets.
+
+Each kind’s count and mean sentiment are added to the market-only model and evaluated on **all test rows**. Negative Brier change favours text.
+
+| Kind | Test coin-days with kind | Post-coin incidences | Brier change | 95% interval | Holm-adjusted p |
+|---|---:|---:|---:|---|---:|
+| events | 13 | 13 | +0.002142 | [-0.000426, +0.006856] | 1.000 |
+| promotion | 6 | 6 | -0.000289 | [-0.001025, +0.000342] | 1.000 |
+| technical | 34 | 38 | -0.000150 | [-0.000446, +0.000175] | 1.000 |
+| other | 105 | 115 | +0.000586 | [-0.000332, +0.001568] | 0.810 |
+
+**No kind demonstrates a reliable improvement here.** All intervals cross zero; promotion and event samples are particularly sparse. Do not promote a flattering small slice into a strategy.
+
+## Method and leakage checks
+
+- Original deduplicated posts; availability is max(publication, archive collection time) where available.
+- Only previous UTC-day posts. Predict next UTC-day close > open; flat counts as not up.
+- Chronological train/validation/test with one-day purge gaps. Training-only scaling and fitting; select C on validation Brier from 0.01, 0.1 and 1.0. Threshold fixed at 0.5.
+- Zero shared train/test UTC dates. Earlier target windows end before the next partition.
+- Twenty training-label permutation refits, twenty feature-placebo refits and four expanding windows.
+- Real accuracy 52.95%; permuted-label maximum 54.20%; feature-placebo maximum 54.92%. The real model does not beat these null maxima. Accuracy nulls need not be 50% under class imbalance.
+
+## Limitations and investor interpretation
+
+Only **142 of 965 test coin-days** contain eligible observed posts. Missing data does not mean there was no discussion on X.
+- This period has already been inspected. The new experiment and text-kind comparisons are exploratory, not a fresh confirmatory test.
+- Selected accounts are not all X. English sentiment, truncated text and collection/edit history limit generalisation. Pretraining overlap is not fully auditable.
+- Same-day association is not causation or a forecast. No fees, slippage, execution or profit evaluation was performed.
+
+**Justifies:** question claims that bullish social posts reliably predict tomorrow; demand baseline comparisons and uncertainty.
+
+**Does not justify:** buying, selling, shorting, leverage, profit expectations, causal claims about tweets moving prices, or universal claims that prediction cannot work.
+
+## Reproduce
+
+Open the Colab notebook and Run all. By default it hash-checks cached scores from the pinned pretrained sentiment model and **trains direction classifiers afresh**. Set `RECOMPUTE_SENTIMENT=True` in the input cell to recompute frozen sentiment inference. No keys are required. A verified server run is not reported as actual Colab training.
 
 ```bash
-python3.12 -m venv .venv
-source .venv/bin/activate
 python -m pip install -r requirements.txt
-python run_nb_capture.py HypeCheck.ipynb /tmp/hypecheck-fresh-run
+python headline_study.py
+python test_headline_study.py
+python test_pipeline.py
 ```
 
-Run `test_pipeline.py` inside the generated working directory after execution: it needs downloaded inputs and the regenerated sentiment cache. A fresh clone intentionally excludes caches and model weights. Local notebook execution does not verify Google Colab's package-install step; package mirrors and Python compatibility can differ.
+`build_headline_colab.py` generates the notebook from executable source; `make_headline_deliverables.py` generates this README from the report. Legacy entrypoints delegate to these generators to prevent restoring abandoned framing.
 
-Dashboard checks and localhost preview:
-```bash
-python -m unittest -v test_web.py
-node docs/app.js --self-test
-node test_dom.mjs
-python serve.py --port 8766
-```
+## What we added
 
-## Security and limitations
-Static dashboard: no account connection, trading, uploads or arbitrary URL fetches. Input hashes, pinned model revisions, safe tensor weights, no remote model code, no pickled estimator, adversarial leakage/tamper tests. See [SECURITY.md](SECURITY.md); this is not a security certification.
+Memecoin-specific market and social source, availability-aware time splits, correctly matched baselines, coin/market ablations, uncertainty, controls, text-kind tests, complete saved predictions and a historical replay.
 
-The archive is retrospective, sparse and not representative of all X. Missing posts do not prove silence. Subsequent exploratory work repeatedly examined the test period; no further tuning or independent-confirmation claim is justified. No prospective deployment or user study was performed. Older exploratory notebooks/scripts remain for transparency, not as endorsed alternative results.
+## Sources and credits
 
-## Credits
-Dataset: [financial-tweets-crypto](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto); model: [FinTwitBERT-sentiment](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), Stephan Akkerman and Tim Koornstra; market data: Binance/Binance Vision. Revisions and third-party terms are in the notebook and source. Libraries: PyTorch, Transformers, safetensors, scikit-learn, pandas, NumPy, PyArrow, Requests and dependencies. Hermes Agent/OpenAI assisted research, implementation, review and testing. The team must understand and explain the work.
+- Posts: https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto ; revision `c4b17a94a667af3da1c9ed5144f998e3a4f29966`.
+- Sentiment: https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment ; revision `da059da3b3bbcb43f9ed1aeb5ae61644010c7e1e`.
+- Binance USDT daily bars and the independently supplied hourly/BTC inputs; source provenance and input hashes in `pipeline.py`, the notebook and archived `docs/report.json`.
+- NumPy, pandas, scikit-learn, PyTorch, Transformers, Hugging Face Hub, Requests.
+- Hermes Agent / OpenAI coding assistance for research, implementation and testing. Team members must understand and explain the work.
+- Veritas project brief Finance §4.2.4: https://drive.google.com/file/d/15tYD48XRmCgWbk1_lLDtc8lebi6qm-4-/view
 
-**Team:** Nathaniel Wong, Aaden Yick, Alastair Chu — Malvern College Hong Kong. Code MIT; third-party data and models retain their terms. [Official brief](https://highschoolhackathon.org/briefs.html).
-
-**This project is a prototype and is not financial advice.**
+*This project is a prototype and is not financial advice.*

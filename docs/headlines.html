@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HypeCheck — Signal or Noise?</title>
+<style>body{margin:0;background:#101719;color:#eaf0e8;font:16px/1.6 system-ui,sans-serif}main{max-width:1050px;margin:auto;padding:36px 24px}a{color:#b6f395}.eyebrow{color:#b6f395;letter-spacing:.15em;font-size:12px}h1{font-size:clamp(32px,6vw,64px);line-height:1.1;max-width:850px;margin:20px 0}h2{margin-top:40px}p{max-width:850px}.muted{color:#acbcb6}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin:26px 0}.card,section{background:#192326;border:1px solid #364541;border-radius:14px;padding:20px}.big{font-size:34px;color:#b6f395}table{width:100%;border-collapse:collapse}td,th{padding:12px 8px;text-align:left;border-bottom:1px solid #3b4a44}th{font-size:13px;color:#b8c9bf}.scroll{overflow:auto}button,select{font:inherit;background:#23332e;color:#eaf0e8;border:1px solid #6c8778;border-radius:8px;padding:10px;margin:5px}button{cursor:pointer}button:hover{background:#385141}button:focus-visible,a:focus-visible,select:focus-visible{outline:3px solid #b6f395}#error{color:#ffacac}#outcome{font-weight:700}footer{margin-top:36px;color:#acbcb6;font-size:14px}.notice{border-left:3px solid #b6f395;padding-left:18px}dl{display:grid;grid-template-columns:1fr 1fr;max-width:650px}dt,dd{margin:5px 0}.hidden{display:none}</style></head>
+<body><main>
+<p class="eyebrow">VERITAS AI · FINANCE · HISTORICAL RESEARCH</p><h1>The post sounds bullish.<br>Does that tell you tomorrow’s direction?</h1>
+<p>We tested prior-day X-post sentiment for DOGE, SHIB, PEPE, BONK and FLOKI. <strong>Not reliably in this experiment.</strong> Beating two weak baselines did not establish that text added useful information.</p>
+<p><a href="https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb">Open the executed notebook</a> · <a href="https://github.com/adeviwon/hypecheck">Code and method</a> · <a href="headline-report.json">Measured JSON</a></p>
+<p class="notice">This project is a prototype and is not financial advice. Retrospective replay only—not a live forecast or trading recommendation. These are headline-style X posts, not newspaper headlines.</p>
+<p id="error" role="alert"></p><div id="cards" class="cards" aria-live="polite"></div>
+<h2>The same test period, the same rows</h2><p id="period" class="muted"></p>
+<div class="scroll"><table><thead><tr><th>Method</th><th>Accuracy</th><th>Brier error ↓</th></tr></thead><tbody id="metrics"></tbody></table></div>
+<p class="muted">Always up and previous-day direction are the requested baselines. Training majority and coin/market-only comparisons guard against mistaking a falling market or coin identity for a text signal. Previous-day direction means yesterday’s open-to-close direction, matching the target.</p>
+<h2>Try the historical replay</h2><section><label for="coin">Coin</label><select id="coin"></select><label for="day">UTC date</label><select id="day"></select><div id="forecast"></div><button id="reveal" type="button">Reveal what happened</button><p id="outcome" aria-live="polite">Outcome hidden.</p></section>
+<p class="muted">The forecast was constructed using information available before the date’s UTC cutoff. Missing archive posts mean missing observations, not an absence of discussion. This replay reads actual saved predictions; it does not score newly pasted text.</p>
+<h2>Do different kinds of posts help?</h2><p>Fixed keyword buckets: events → promotion → technical → other. For each kind, add its count and mean sentiment to market history. All comparisons use the full test panel; observed-kind counts show how sparse the evidence is. Categories are approximate rules, not manually validated labels.</p>
+<div class="scroll"><table><thead><tr><th>Kind</th><th>Coin-days with kind</th><th>Brier change vs market</th><th>95% interval</th><th>Adjusted p</th></tr></thead><tbody id="kinds"></tbody></table></div>
+<p>Negative Brier change favours the text features. <strong>Every interval spans zero.</strong> No kind demonstrates a reliable improvement here, and tiny slices cannot support trading claims.</p>
+<h2>What would this justify?</h2><p><strong>It justifies questioning claims of reliable sentiment-based forecasting.</strong> It does not justify buying, selling, shorting, leverage, profit expectations, or claims that tweets cause prices to change. Nor does this result prove that all prediction is impossible.</p>
+<p class="muted">The final period was inspected in earlier work; this is an exploratory extension, not an untouched confirmatory test. Pretraining overlap, collection timestamps, edits and sparse archive coverage limit the inference. No fees, slippage or execution study was performed.</p>
+<footer>Frozen pretrained FinTwitBERT features + trained logistic regression. Encoder not fine-tuned. The notebook trains the direction models afresh; its default sentiment cache is pinned and hash-checked. <a href="https://github.com/adeviwon/hypecheck#sources-and-credits">Sources and credits</a>.</footer>
+</main><script>
+'use strict';
+function text(tag,value){const e=document.createElement(tag);e.textContent=value;return e;}
+function row(target,values){const tr=document.createElement('tr');values.forEach(v=>tr.append(text('td',v)));document.getElementById(target).append(tr);}
+const pct=x=>(100*x).toFixed(2)+'%';let records=[];
+function showForecast(){
+ const c=document.getElementById('coin').value,d=document.getElementById('day').value;
+ const item=records.find(r=>r.coin===c&&r.date.slice(0,10)===d);if(!item)throw Error('No replay row for selected key');
+ const out=document.getElementById('forecast');out.replaceChildren();
+ const dl=document.createElement('dl');
+ const values=[['Model probability of up (uncalibrated)',pct(item['Sentiment + coin'])],['Model direction',item['Sentiment + coin']>=.5?'Up':'Not up'],['Previous-day direction',item.previous_day?'Up':'Not up'],['Eligible archive posts',String(item.post_count)]];
+ for(const [key,value]of values){dl.append(text('dt',key),text('dd',value));}out.append(dl);
+ document.getElementById('outcome').textContent='Outcome hidden.';
+ document.getElementById('reveal').onclick=()=>{document.getElementById('outcome').textContent='Actual: '+(item.actual_up?'up':'not up')+' · open-to-close return '+pct(item.actual_return);};
+}
+async function load(){
+ const responses=await Promise.all([fetch('headline-report.json'),fetch('headline-predictions.json')]);
+ if(responses.some(r=>!r.ok))throw Error('Could not load measured results. Open the notebook instead.');
+ const [r,p]=await Promise.all(responses.map(x=>x.json()));records=p;
+ if(p.length!==r.protocol.splits.test.rows)throw Error('Prediction count does not match measured report.');
+ const s=r.protocol.splits.test;document.getElementById('period').textContent=s.start+'–'+s.end+' · '+s.rows+' coin-days · '+s.dates+' UTC dates.';
+ const order=['Always up','Previous-day direction','Training majority','Sentiment + coin','Coin only','Market only','Market + sentiment'];
+ for(const name of order){const m=r.metrics[name];row('metrics',[name,pct(m.accuracy),m.brier.toFixed(4)]);}
+ for(const name of ['Always up','Previous-day direction','Sentiment + coin','Training majority']){
+  const card=document.createElement('div');card.className='card';card.append(text('div',name));const value=text('div',pct(r.metrics[name].accuracy));value.className='big';card.append(value);document.getElementById('cards').append(card);
+ }
+ for(const k of r.kinds){const v=k.paired_brier_vs_market;row('kinds',[k.kind,k.test_coin_days_with_kind,v.mean.toFixed(6),'['+v.interval95.map(x=>x.toFixed(6)).join(', ')+']',k.holm_adjusted_p.toFixed(3)]);}
+ const coins=[...new Set(p.map(x=>x.coin))].sort(),days=[...new Set(p.map(x=>x.date.slice(0,10)))].sort();
+ for(const c of coins)document.getElementById('coin').append(new Option(c,c));for(const d of days)document.getElementById('day').append(new Option(d,d));
+ document.getElementById('coin').onchange=showForecast;document.getElementById('day').onchange=showForecast;showForecast();
+}
+load().catch(e=>{document.getElementById('error').textContent=e.message;document.getElementById('reveal').disabled=true;});
+</script></body></html>

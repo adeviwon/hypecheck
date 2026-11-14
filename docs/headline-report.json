@@ -1,0 +1,1016 @@
+{
+  "question": "Do prior-day X-post headline-style texts add information about next-UTC-day memecoin direction?",
+  "primary_model": "Sentiment + coin",
+  "target": "close > open on target UTC day; flat counts as not up",
+  "source_description": "Original X posts, not newspaper headlines. Archive subset, not complete coverage of X.",
+  "protocol": {
+    "coins": [
+      "DOGE",
+      "SHIB",
+      "PEPE",
+      "BONK",
+      "FLOKI"
+    ],
+    "splits": {
+      "train": {
+        "start": "2024-03-01",
+        "end": "2025-09-29",
+        "rows": 2890,
+        "dates": 578
+      },
+      "validation": {
+        "start": "2025-10-01",
+        "end": "2026-04-10",
+        "rows": 960,
+        "dates": 192
+      },
+      "test": {
+        "start": "2026-04-12",
+        "end": "2026-10-21",
+        "rows": 965,
+        "dates": 193
+      }
+    },
+    "C_candidates": [
+      0.01,
+      0.1,
+      1.0
+    ],
+    "selection": "validation Brier only; threshold 0.5; no refit on validation for frozen model",
+    "availability": "max(created_at, first_posted_at); prior UTC-day posts only",
+    "previous_day_baseline": "Previous calendar UTC-day close > open, not previous close-to-close return.",
+    "test_reuse": "Exploratory extension: this test period was inspected in earlier research. Not a fresh confirmatory test."
+  },
+  "model_source": {
+    "model": "StephanAkkerman/FinTwitBERT-sentiment",
+    "revision": "da059da3b3bbcb43f9ed1aeb5ae61644010c7e1e",
+    "dataset": "StephanAkkerman/financial-tweets-crypto",
+    "dataset_revision": "c4b17a94a667af3da1c9ed5144f998e3a4f29966",
+    "score_signature": "b1defb441ff237a747a726efc5662e8806eb45b950e0ccd1f14104822c1357be"
+  },
+  "leakage_checks": {
+    "shared_train_test_dates": 0,
+    "train_target_end_before_validation": true,
+    "validation_target_end_before_test": true,
+    "prior_only_post_windows": true,
+    "all_models_same_test_rows": true
+  },
+  "coverage": {
+    "eligible_original_posts": 1124,
+    "test_coin_days_with_posts": 142,
+    "test_coin_days_total": 965
+  },
+  "selection": {
+    "Sentiment + coin": {
+      "C": 1.0,
+      "validation_brier": 0.24705614000084217
+    },
+    "Coin only": {
+      "C": 0.01,
+      "validation_brier": 0.24718720396145846
+    },
+    "Market only": {
+      "C": 1.0,
+      "validation_brier": 0.2459265020391876
+    },
+    "Market + sentiment": {
+      "C": 1.0,
+      "validation_brier": 0.2457961251977226
+    }
+  },
+  "metrics": {
+    "Always up": {
+      "name": "Always up",
+      "accuracy": 0.46528497409326425,
+      "balanced_accuracy": 0.5,
+      "brier": 0.5347150259067357,
+      "n": 965,
+      "n_dates": 193,
+      "per_coin": {
+        "DOGE": {
+          "accuracy": 0.48186528497409326,
+          "balanced_accuracy": 0.5,
+          "brier": 0.5181347150259067,
+          "n": 193
+        },
+        "SHIB": {
+          "accuracy": 0.46113989637305697,
+          "balanced_accuracy": 0.5,
+          "brier": 0.538860103626943,
+          "n": 193
+        },
+        "PEPE": {
+          "accuracy": 0.48704663212435234,
+          "balanced_accuracy": 0.5,
+          "brier": 0.5129533678756477,
+          "n": 193
+        },
+        "BONK": {
+          "accuracy": 0.42487046632124353,
+          "balanced_accuracy": 0.5,
+          "brier": 0.5751295336787565,
+          "n": 193
+        },
+        "FLOKI": {
+          "accuracy": 0.47150259067357514,
+          "balanced_accuracy": 0.5,
+          "brier": 0.5284974093264249,
+          "n": 193
+        }
+      }
+    },
+    "Previous-day direction": {
+      "name": "Previous-day direction",
+      "accuracy": 0.49326424870466323,
+      "balanced_accuracy": 0.49059279017972757,
+      "brier": 0.5067357512953368,
+      "n": 965,
+      "n_dates": 193,
+      "per_coin": {
+        "DOGE": {
+          "accuracy": 0.47668393782383417,
+          "balanced_accuracy": 0.47580645161290325,
+          "brier": 0.5233160621761658,
+          "n": 193
+        },
+        "SHIB": {
+          "accuracy": 0.538860103626943,
+          "balanced_accuracy": 0.5356525496974935,
+          "brier": 0.46113989637305697,
+          "n": 193
+        },
+        "PEPE": {
+          "accuracy": 0.46113989637305697,
+          "balanced_accuracy": 0.46077799269288633,
+          "brier": 0.538860103626943,
+          "n": 193
+        },
+        "BONK": {
+          "accuracy": 0.5077720207253886,
+          "balanced_accuracy": 0.49560536145902,
+          "brier": 0.49222797927461137,
+          "n": 193
+        },
+        "FLOKI": {
+          "accuracy": 0.48186528497409326,
+          "balanced_accuracy": 0.48017668605903896,
+          "brier": 0.5181347150259067,
+          "n": 193
+        }
+      }
+    },
+    "Training majority": {
+      "name": "Training majority",
+      "accuracy": 0.5347150259067357,
+      "balanced_accuracy": 0.5,
+      "brier": 0.46528497409326425,
+      "n": 965,
+      "n_dates": 193,
+      "per_coin": {
+        "DOGE": {
+          "accuracy": 0.5181347150259067,
+          "balanced_accuracy": 0.5,
+          "brier": 0.48186528497409326,
+          "n": 193
+        },
+        "SHIB": {
+          "accuracy": 0.538860103626943,
+          "balanced_accuracy": 0.5,
+          "brier": 0.46113989637305697,
+          "n": 193
+        },
+        "PEPE": {
+          "accuracy": 0.5129533678756477,
+          "balanced_accuracy": 0.5,
+          "brier": 0.48704663212435234,
+          "n": 193
+        },
+        "BONK": {
+          "accuracy": 0.5751295336787565,
+          "balanced_accuracy": 0.5,
+          "brier": 0.42487046632124353,
+          "n": 193
+        },
+        "FLOKI": {
+          "accuracy": 0.5284974093264249,
+          "balanced_accuracy": 0.5,
+          "brier": 0.47150259067357514,
+          "n": 193
+        }
+      }
+    },
+    "Training prevalence": {
+      "name": "Training prevalence",
+      "accuracy": 0.5347150259067357,
+      "balanced_accuracy": 0.5,
+      "brier": 0.2491353451302279,
+      "n": 965,
+      "n_dates": 193,
+      "per_coin": {
+        "DOGE": {
+          "accuracy": 0.5181347150259067,
+          "balanced_accuracy": 0.5,
+          "brier": 0.2496746355187393,
+          "n": 193
+        },
+        "SHIB": {
+          "accuracy": 0.538860103626943,
+          "balanced_accuracy": 0.5,
+          "brier": 0.24900052253310007,
+          "n": 193
+        },
+        "PEPE": {
+          "accuracy": 0.5129533678756477,
+          "balanced_accuracy": 0.5,
+          "brier": 0.24984316376514906,
+          "n": 193
+        },
+        "BONK": {
+          "accuracy": 0.5751295336787565,
+          "balanced_accuracy": 0.5,
+          "brier": 0.24782082480823134,
+          "n": 193
+        },
+        "FLOKI": {
+          "accuracy": 0.5284974093264249,
+          "balanced_accuracy": 0.5,
+          "brier": 0.24933757902591966,
+          "n": 193
+        }
+      }
+    },
+    "Sentiment + coin": {
+      "name": "Sentiment + coin",
+      "accuracy": 0.5295336787564767,
+      "balanced_accuracy": 0.5025293071597521,
+      "brier": 0.25013056217116375,
+      "n": 965,
+      "n_dates": 193,
+      "per_coin": {
+        "DOGE": {
+          "accuracy": 0.47150259067357514,
+          "balanced_accuracy": 0.4621505376344086,
+          "brier": 0.2534724996216466,
+          "n": 193
+        },
+        "SHIB": {
+          "accuracy": 0.5492227979274611,
+          "balanced_accuracy": 0.5136668107173725,
+          "brier": 0.2488054603540105,
+          "n": 193
+        },
+        "PEPE": {
+          "accuracy": 0.5284974093264249,
+          "balanced_accuracy": 0.5194498173221578,
+          "brier": 0.2496408055184113,
+          "n": 193
+        },
+        "BONK": {
+          "accuracy": 0.5803108808290155,
+          "balanced_accuracy": 0.514062843331136,
+          "brier": 0.24797992662624213,
+          "n": 193
+        },
+        "FLOKI": {
+          "accuracy": 0.5181347150259067,
+          "balanced_accuracy": 0.4931588019823314,
+          "brier": 0.2507541187355083,
+          "n": 193
+        }
+      }
+    },
+    "Coin only": {
+      "name": "Coin only",
+      "accuracy": 0.5347150259067357,
+      "balanced_accuracy": 0.5,
+      "brier": 0.2490969698483752,
+      "n": 965,
+      "n_dates": 193,
+      "per_coin": {
+        "DOGE": {
+          "accuracy": 0.5181347150259067,
+          "balanced_accuracy": 0.5,
+          "brier": 0.2497114935677009,
+          "n": 193
+        },
+        "SHIB": {
+          "accuracy": 0.538860103626943,
+          "balanced_accuracy": 0.5,
+          "brier": 0.2487738777264149,
+          "n": 193
+        },
+        "PEPE": {
+          "accuracy": 0.5129533678756477,
+          "balanced_accuracy": 0.5,
+          "brier": 0.24983297581212063,
+          "n": 193
+        },
+        "BONK": {
+          "accuracy": 0.5751295336787565,
+          "balanced_accuracy": 0.5,
+          "brier": 0.24786671997866763,
+          "n": 193
+        },
+        "FLOKI": {
+          "accuracy": 0.5284974093264249,
+          "balanced_accuracy": 0.5,
+          "brier": 0.249299782156972,
+          "n": 193
+        }
+      }
+    },
+    "Market only": {
+      "name": "Market only",
+      "accuracy": 0.5367875647668394,
+      "balanced_accuracy": 0.5149513993197632,
+      "brier": 0.24805394095779587,
+      "n": 965,
+      "n_dates": 193,
+      "per_coin": {
+        "DOGE": {
+          "accuracy": 0.533678756476684,
+          "balanced_accuracy": 0.5262903225806451,
+          "brier": 0.2488152514948326,
+          "n": 193
+        },
+        "SHIB": {
+          "accuracy": 0.5492227979274611,
+          "balanced_accuracy": 0.5144770959377701,
+          "brier": 0.2469043920199704,
+          "n": 193
+        },
+        "PEPE": {
+          "accuracy": 0.5181347150259067,
+          "balanced_accuracy": 0.5106920266494734,
+          "brier": 0.24962976626744368,
+          "n": 193
+        },
+        "BONK": {
+          "accuracy": 0.533678756476684,
+          "balanced_accuracy": 0.49423203691496376,
+          "brier": 0.2477584963211407,
+          "n": 193
+        },
+        "FLOKI": {
+          "accuracy": 0.5492227979274611,
+          "balanced_accuracy": 0.5279034690799397,
+          "brier": 0.24716179868559193,
+          "n": 193
+        }
+      }
+    },
+    "Market + sentiment": {
+      "name": "Market + sentiment",
+      "accuracy": 0.5305699481865285,
+      "balanced_accuracy": 0.5123185027882806,
+      "brier": 0.2491186920486227,
+      "n": 965,
+      "n_dates": 193,
+      "per_coin": {
+        "DOGE": {
+          "accuracy": 0.48186528497409326,
+          "balanced_accuracy": 0.47854838709677416,
+          "brier": 0.2525271843911297,
+          "n": 193
+        },
+        "SHIB": {
+          "accuracy": 0.5544041450777202,
+          "balanced_accuracy": 0.5225259291270528,
+          "brier": 0.24704702393331351,
+          "n": 193
+        },
+        "PEPE": {
+          "accuracy": 0.5129533678756477,
+          "balanced_accuracy": 0.5077906726842897,
+          "brier": 0.24941872437809184,
+          "n": 193
+        },
+        "BONK": {
+          "accuracy": 0.5544041450777202,
+          "balanced_accuracy": 0.5170292243462975,
+          "brier": 0.24787948375229477,
+          "n": 193
+        },
+        "FLOKI": {
+          "accuracy": 0.5492227979274611,
+          "balanced_accuracy": 0.5284960137901314,
+          "brier": 0.24872104378828344,
+          "n": 193
+        }
+      }
+    }
+  },
+  "paired_accuracy_differences": {
+    "Always up": {
+      "mean": 0.06424870466321243,
+      "interval95": [
+        -0.03212435233160622,
+        0.1648186528497409
+      ],
+      "method": "1000 paired circular seven-observed-date block resamples; coins kept together"
+    },
+    "Previous-day direction": {
+      "mean": 0.03626943005181347,
+      "interval95": [
+        -0.00932642487046632,
+        0.08085492227979273
+      ],
+      "method": "1000 paired circular seven-observed-date block resamples; coins kept together"
+    },
+    "Coin only": {
+      "mean": -0.0051813471502590676,
+      "interval95": [
+        -0.02694300518134715,
+        0.0176424870466321
+      ],
+      "method": "1000 paired circular seven-observed-date block resamples; coins kept together"
+    },
+    "Market only": {
+      "mean": -0.007253886010362694,
+      "interval95": [
+        -0.04564766839378238,
+        0.031088082901554404
+      ],
+      "method": "1000 paired circular seven-observed-date block resamples; coins kept together"
+    },
+    "Training majority": {
+      "mean": -0.0051813471502590676,
+      "interval95": [
+        -0.02694300518134715,
+        0.0176424870466321
+      ],
+      "method": "1000 paired circular seven-observed-date block resamples; coins kept together"
+    },
+    "sentiment_increment_brier": {
+      "mean": 0.0010647510908267921,
+      "interval95": [
+        -0.00015943486069307106,
+        0.002482529069971483
+      ],
+      "method": "1000 paired circular seven-observed-date block resamples; coins kept together"
+    }
+  },
+  "kinds": [
+    {
+      "kind": "events",
+      "selection": {
+        "C": 1.0,
+        "validation_brier": 0.24604325017659284
+      },
+      "train_posts": 24,
+      "test_posts": 13,
+      "test_coin_days_with_kind": 13,
+      "all_test_rows": {
+        "accuracy": 0.5357512953367876,
+        "balanced_accuracy": 0.5154283420521054,
+        "brier": 0.2501958909057149,
+        "n": 965
+      },
+      "kind_present_rows": {
+        "kind_model": {
+          "accuracy": 0.38461538461538464,
+          "balanced_accuracy": 0.3666666666666667,
+          "brier": 0.41448731276645306,
+          "n": 13
+        },
+        "market_only": {
+          "accuracy": 0.23076923076923078,
+          "balanced_accuracy": 0.26666666666666666,
+          "brier": 0.2610835097251772,
+          "n": 13
+        },
+        "always_up": {
+          "accuracy": 0.7692307692307693,
+          "balanced_accuracy": 0.5,
+          "brier": 0.23076923076923078,
+          "n": 13
+        },
+        "previous_day": {
+          "accuracy": 0.46153846153846156,
+          "balanced_accuracy": 0.5333333333333333,
+          "brier": 0.5384615384615384,
+          "n": 13
+        }
+      },
+      "paired_brier_vs_market": {
+        "mean": 0.002141949947919058,
+        "interval95": [
+          -0.0004264374248814405,
+          0.00685624084708933
+        ],
+        "method": "1000 paired circular seven-observed-date block resamples; coins kept together"
+      },
+      "block_sign_p": 0.5727136431784108,
+      "scope": "Exploratory fixed-rule buckets; overlapping coin-day slices; not manually validated semantic labels.",
+      "holm_adjusted_p": 1.0
+    },
+    {
+      "kind": "promotion",
+      "selection": {
+        "C": 1.0,
+        "validation_brier": 0.24595483310561134
+      },
+      "train_posts": 24,
+      "test_posts": 6,
+      "test_coin_days_with_kind": 6,
+      "all_test_rows": {
+        "accuracy": 0.5367875647668394,
+        "balanced_accuracy": 0.5168311147942888,
+        "brier": 0.24776482630502056,
+        "n": 965
+      },
+      "kind_present_rows": {
+        "kind_model": {
+          "accuracy": 0.8333333333333334,
+          "balanced_accuracy": 0.5,
+          "brier": 0.192587280526156,
+          "n": 6
+        },
+        "market_only": {
+          "accuracy": 0.5,
+          "balanced_accuracy": 0.3,
+          "brier": 0.24471440049402218,
+          "n": 6
+        },
+        "always_up": {
+          "accuracy": 0.16666666666666666,
+          "balanced_accuracy": 0.5,
+          "brier": 0.8333333333333334,
+          "n": 6
+        },
+        "previous_day": {
+          "accuracy": 0.3333333333333333,
+          "balanced_accuracy": 0.2,
+          "brier": 0.6666666666666666,
+          "n": 6
+        }
+      },
+      "paired_brier_vs_market": {
+        "mean": -0.00028911465277531984,
+        "interval95": [
+          -0.0010250321432907577,
+          0.0003421419468128213
+        ],
+        "method": "1000 paired circular seven-observed-date block resamples; coins kept together"
+      },
+      "block_sign_p": 0.440279860069965,
+      "scope": "Exploratory fixed-rule buckets; overlapping coin-day slices; not manually validated semantic labels.",
+      "holm_adjusted_p": 1.0
+    },
+    {
+      "kind": "technical",
+      "selection": {
+        "C": 1.0,
+        "validation_brier": 0.24580604679796314
+      },
+      "train_posts": 267,
+      "test_posts": 38,
+      "test_coin_days_with_kind": 34,
+      "all_test_rows": {
+        "accuracy": 0.5326424870466321,
+        "balanced_accuracy": 0.5109308368294746,
+        "brier": 0.24790354101715043,
+        "n": 965
+      },
+      "kind_present_rows": {
+        "kind_model": {
+          "accuracy": 0.5588235294117647,
+          "balanced_accuracy": 0.5350877192982456,
+          "brier": 0.24336175235080781,
+          "n": 34
+        },
+        "market_only": {
+          "accuracy": 0.5588235294117647,
+          "balanced_accuracy": 0.6052631578947368,
+          "brier": 0.2456457948979019,
+          "n": 34
+        },
+        "always_up": {
+          "accuracy": 0.5588235294117647,
+          "balanced_accuracy": 0.5,
+          "brier": 0.4411764705882353,
+          "n": 34
+        },
+        "previous_day": {
+          "accuracy": 0.47058823529411764,
+          "balanced_accuracy": 0.47017543859649125,
+          "brier": 0.5294117647058824,
+          "n": 34
+        }
+      },
+      "paired_brier_vs_market": {
+        "mean": -0.0001503999406454181,
+        "interval95": [
+          -0.0004461624343083448,
+          0.00017494186526141652
+        ],
+        "method": "1000 paired circular seven-observed-date block resamples; coins kept together"
+      },
+      "block_sign_p": 0.3543228385807096,
+      "scope": "Exploratory fixed-rule buckets; overlapping coin-day slices; not manually validated semantic labels.",
+      "holm_adjusted_p": 1.0
+    },
+    {
+      "kind": "other",
+      "selection": {
+        "C": 1.0,
+        "validation_brier": 0.24559069339086506
+      },
+      "train_posts": 682,
+      "test_posts": 115,
+      "test_coin_days_with_kind": 105,
+      "all_test_rows": {
+        "accuracy": 0.5440414507772021,
+        "balanced_accuracy": 0.5230356865385611,
+        "brier": 0.24863977821137345,
+        "n": 965
+      },
+      "kind_present_rows": {
+        "kind_model": {
+          "accuracy": 0.5238095238095238,
+          "balanced_accuracy": 0.5310457516339869,
+          "brier": 0.2549103860434827,
+          "n": 105
+        },
+        "market_only": {
+          "accuracy": 0.5333333333333333,
+          "balanced_accuracy": 0.5272331154684096,
+          "brier": 0.24850898844575312,
+          "n": 105
+        },
+        "always_up": {
+          "accuracy": 0.4857142857142857,
+          "balanced_accuracy": 0.5,
+          "brier": 0.5142857142857142,
+          "n": 105
+        },
+        "previous_day": {
+          "accuracy": 0.45714285714285713,
+          "balanced_accuracy": 0.4580610021786492,
+          "brier": 0.5428571428571428,
+          "n": 105
+        }
+      },
+      "paired_brier_vs_market": {
+        "mean": 0.0005858372535775594,
+        "interval95": [
+          -0.00033243477377861334,
+          0.001568227050408359
+        ],
+        "method": "1000 paired circular seven-observed-date block resamples; coins kept together"
+      },
+      "block_sign_p": 0.20239880059970014,
+      "scope": "Exploratory fixed-rule buckets; overlapping coin-day slices; not manually validated semantic labels.",
+      "holm_adjusted_p": 0.8095952023988006
+    }
+  ],
+  "taxonomy": {
+    "events": "\\b(?:etf|approv(?:al|ed)|list(?:ing|ed)|delist|partnership|launch|upgrade|lawsuit|sec|regulat\\w*|hack(?:ed)?|exploit|burn(?:ed|ing)?|airdrop|adoption)\\b",
+    "promotion": "\\b(?:buy now|last chance|don.t miss|guaranteed|moon|fomo|ape in|send it|gem|100x|1000x|lambo)\\b|🚀",
+    "technical": "\\b(?:support|resistance|breakout|breakdown|trend(?:line)?|rsi|moving average|sma|ema|chart|consolidat\\w*|candle|volume|bullish|bearish|longs?|shorts?)\\b"
+  },
+  "controls": {
+    "runs": 20,
+    "real_accuracy": 0.5295336787564767,
+    "label_permuted_accuracy": [
+      0.49119170984455957,
+      0.522279792746114,
+      0.5005181347150259,
+      0.49533678756476685,
+      0.5253886010362694,
+      0.522279792746114,
+      0.5067357512953368,
+      0.5357512953367876,
+      0.5202072538860104,
+      0.5253886010362694,
+      0.5378238341968912,
+      0.5253886010362694,
+      0.48601036269430054,
+      0.5274611398963731,
+      0.5264248704663212,
+      0.5378238341968912,
+      0.5295336787564767,
+      0.5119170984455959,
+      0.5129533678756477,
+      0.5419689119170984
+    ],
+    "feature_placebo_accuracy": [
+      0.5212435233160622,
+      0.5398963730569948,
+      0.5347150259067357,
+      0.5492227979274611,
+      0.5357512953367876,
+      0.5326424870466321,
+      0.5243523316062176,
+      0.5170984455958549,
+      0.5398963730569948,
+      0.5233160621761658,
+      0.5305699481865285,
+      0.5253886010362694,
+      0.5284974093264249,
+      0.5419689119170984,
+      0.5430051813471503,
+      0.5284974093264249,
+      0.5357512953367876,
+      0.538860103626943,
+      0.5316062176165803,
+      0.5253886010362694
+    ],
+    "label_permuted_max": 0.5419689119170984,
+    "feature_placebo_max": 0.5492227979274611
+  },
+  "walk_forward": {
+    "note": "Secondary expanding-window re-estimation on the same final dates, not an independent replication.",
+    "windows": [
+      {
+        "start": "2026-04-12",
+        "end": "2026-05-30",
+        "n": 245,
+        "metrics": {
+          "Sentiment + coin": {
+            "accuracy": 0.5183673469387755,
+            "balanced_accuracy": 0.4965918203688853,
+            "brier": 0.2519597299936928,
+            "n": 245
+          },
+          "Market only": {
+            "accuracy": 0.5265306122448979,
+            "balanced_accuracy": 0.5013031275060145,
+            "brier": 0.24949253903816726,
+            "n": 245
+          },
+          "Market + sentiment": {
+            "accuracy": 0.5306122448979592,
+            "balanced_accuracy": 0.5086541031809676,
+            "brier": 0.2521147465172728,
+            "n": 245
+          },
+          "Always up": {
+            "accuracy": 0.47346938775510206,
+            "balanced_accuracy": 0.5,
+            "brier": 0.5265306122448979,
+            "n": 245
+          },
+          "Previous-day direction": {
+            "accuracy": 0.47346938775510206,
+            "balanced_accuracy": 0.47133119486768243,
+            "brier": 0.5265306122448979,
+            "n": 245
+          }
+        }
+      },
+      {
+        "start": "2026-05-31",
+        "end": "2026-07-17",
+        "n": 240,
+        "metrics": {
+          "Sentiment + coin": {
+            "accuracy": 0.6166666666666667,
+            "balanced_accuracy": 0.5238997376858059,
+            "brier": 0.2428028136048547,
+            "n": 240
+          },
+          "Market only": {
+            "accuracy": 0.5958333333333333,
+            "balanced_accuracy": 0.4991984844068785,
+            "brier": 0.24532900656556905,
+            "n": 240
+          },
+          "Market + sentiment": {
+            "accuracy": 0.5875,
+            "balanced_accuracy": 0.5018216263480035,
+            "brier": 0.24509114710040963,
+            "n": 240
+          },
+          "Always up": {
+            "accuracy": 0.39166666666666666,
+            "balanced_accuracy": 0.5,
+            "brier": 0.6083333333333333,
+            "n": 240
+          },
+          "Previous-day direction": {
+            "accuracy": 0.5541666666666667,
+            "balanced_accuracy": 0.5331535995336636,
+            "brier": 0.44583333333333336,
+            "n": 240
+          }
+        }
+      },
+      {
+        "start": "2026-07-18",
+        "end": "2026-09-03",
+        "n": 240,
+        "metrics": {
+          "Sentiment + coin": {
+            "accuracy": 0.5541666666666667,
+            "balanced_accuracy": 0.5332080200501252,
+            "brier": 0.24817047954101323,
+            "n": 240
+          },
+          "Market only": {
+            "accuracy": 0.5291666666666667,
+            "balanced_accuracy": 0.5048036758563075,
+            "brier": 0.24650185289756807,
+            "n": 240
+          },
+          "Market + sentiment": {
+            "accuracy": 0.5458333333333333,
+            "balanced_accuracy": 0.5244360902255639,
+            "brier": 0.24514509978492527,
+            "n": 240
+          },
+          "Always up": {
+            "accuracy": 0.475,
+            "balanced_accuracy": 0.5,
+            "brier": 0.525,
+            "n": 240
+          },
+          "Previous-day direction": {
+            "accuracy": 0.48333333333333334,
+            "balanced_accuracy": 0.4816207184628237,
+            "brier": 0.5166666666666667,
+            "n": 240
+          }
+        }
+      },
+      {
+        "start": "2026-09-04",
+        "end": "2026-10-21",
+        "n": 240,
+        "metrics": {
+          "Sentiment + coin": {
+            "accuracy": 0.44166666666666665,
+            "balanced_accuracy": 0.45460869565217393,
+            "brier": 0.25581315023595336,
+            "n": 240
+          },
+          "Market only": {
+            "accuracy": 0.5,
+            "balanced_accuracy": 0.52,
+            "brier": 0.2501958120752244,
+            "n": 240
+          },
+          "Market + sentiment": {
+            "accuracy": 0.4666666666666667,
+            "balanced_accuracy": 0.4810434782608696,
+            "brier": 0.2529456162926637,
+            "n": 240
+          },
+          "Always up": {
+            "accuracy": 0.5208333333333334,
+            "balanced_accuracy": 0.5,
+            "brier": 0.4791666666666667,
+            "n": 240
+          },
+          "Previous-day direction": {
+            "accuracy": 0.4625,
+            "balanced_accuracy": 0.46139130434782605,
+            "brier": 0.5375,
+            "n": 240
+          }
+        }
+      }
+    ],
+    "pooled": {
+      "Sentiment + coin": {
+        "name": "Sentiment + coin",
+        "accuracy": 0.5326424870466321,
+        "balanced_accuracy": 0.5052916904058977,
+        "brier": 0.24969832151304855,
+        "n": 965,
+        "n_dates": 193,
+        "per_coin": {
+          "DOGE": {
+            "accuracy": 0.47668393782383417,
+            "balanced_accuracy": 0.4667741935483871,
+            "brier": 0.25412972334907474,
+            "n": 193
+          },
+          "SHIB": {
+            "accuracy": 0.5440414507772021,
+            "balanced_accuracy": 0.5080488331892826,
+            "brier": 0.24845101312729848,
+            "n": 193
+          },
+          "PEPE": {
+            "accuracy": 0.538860103626943,
+            "balanced_accuracy": 0.529819471308833,
+            "brier": 0.2495753822347127,
+            "n": 193
+          },
+          "BONK": {
+            "accuracy": 0.5803108808290155,
+            "balanced_accuracy": 0.514062843331136,
+            "brier": 0.24576682755072823,
+            "n": 193
+          },
+          "FLOKI": {
+            "accuracy": 0.5233160621761658,
+            "balanced_accuracy": 0.4980607627666451,
+            "brier": 0.2505686613034287,
+            "n": 193
+          }
+        }
+      },
+      "Market only": {
+        "name": "Market only",
+        "accuracy": 0.5378238341968912,
+        "balanced_accuracy": 0.5050758792147926,
+        "brier": 0.24788815879125156,
+        "n": 965,
+        "n_dates": 193,
+        "per_coin": {
+          "DOGE": {
+            "accuracy": 0.5233160621761658,
+            "balanced_accuracy": 0.5061290322580645,
+            "brier": 0.24883654304629624,
+            "n": 193
+          },
+          "SHIB": {
+            "accuracy": 0.5440414507772021,
+            "balanced_accuracy": 0.5056179775280899,
+            "brier": 0.24738181934059375,
+            "n": 193
+          },
+          "PEPE": {
+            "accuracy": 0.5233160621761658,
+            "balanced_accuracy": 0.5119815173006662,
+            "brier": 0.2500540230228129,
+            "n": 193
+          },
+          "BONK": {
+            "accuracy": 0.5647668393782384,
+            "balanced_accuracy": 0.49577016040430677,
+            "brier": 0.24542187391506814,
+            "n": 193
+          },
+          "FLOKI": {
+            "accuracy": 0.533678756476684,
+            "balanced_accuracy": 0.5054945054945055,
+            "brier": 0.24774653463148677,
+            "n": 193
+          }
+        }
+      },
+      "Market + sentiment": {
+        "name": "Market + sentiment",
+        "accuracy": 0.5326424870466321,
+        "balanced_accuracy": 0.5051470969078573,
+        "brier": 0.24884120213414662,
+        "n": 965,
+        "n_dates": 193,
+        "per_coin": {
+          "DOGE": {
+            "accuracy": 0.49222797927461137,
+            "balanced_accuracy": 0.48102150537634414,
+            "brier": 0.25312741926669347,
+            "n": 193
+          },
+          "SHIB": {
+            "accuracy": 0.5440414507772021,
+            "balanced_accuracy": 0.5080488331892826,
+            "brier": 0.24724491290325545,
+            "n": 193
+          },
+          "PEPE": {
+            "accuracy": 0.5181347150259067,
+            "balanced_accuracy": 0.509886094992478,
+            "brier": 0.24939419081323536,
+            "n": 193
+          },
+          "BONK": {
+            "accuracy": 0.5803108808290155,
+            "balanced_accuracy": 0.5156558998022412,
+            "brier": 0.24549574210287947,
+            "n": 193
+          },
+          "FLOKI": {
+            "accuracy": 0.5284974093264249,
+            "balanced_accuracy": 0.5023701788407671,
+            "brier": 0.24894374558466947,
+            "n": 193
+          }
+        }
+      }
+    }
+  },
+  "investor_interpretation": {
+    "justifies": [
+      "Treat bullish posts as opinions, not validated forecasts.",
+      "Use this study to question claims of reliable sentiment-based direction prediction."
+    ],
+    "does_not_justify": [
+      "Buying, selling, shorting or leverage from these predictions.",
+      "Claiming posts cause returns, or that all memecoin text prediction is impossible.",
+      "Expected profits, live trading efficacy or universal conclusions about all X posts."
+    ]
+  },
+  "limitations": [
+    "Frozen pretrained sentiment encoder plus trained logistic regression; encoder is not fine-tuned in this experiment.",
+    "Rule-based text kinds are approximate and not manually validated; group slices may overlap.",
+    "Sparse archive coverage and source concentration limit generalisation.",
+    "Pretraining-corpus overlap and collection/edited-text history are not fully auditable.",
+    "No fees, slippage, trade execution or profitability evaluation."
+  ],
+  "disclaimer": "This project is a prototype and is not financial advice."
+}

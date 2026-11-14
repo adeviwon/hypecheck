@@ -1,31 +1,21 @@
-# Submission handoff
+# HypeCheck — Signal or Noise?
 
-## Required links
-- Code: https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb
-- Write-up: https://github.com/adeviwon/hypecheck/blob/main/WRITEUP.md
-- Demo: https://adeviwon.github.io/hypecheck/
-- Form: https://airtable.com/appypCyHN77hElIcS/shrXA5VBFdugmoXl6
+**Track:** AI + Finance, adapted from brief §4.2.4.
 
-## One-sentence pitch
-Our project helps a beginner crypto investor by taking archived social posts and price history and giving back an honest, baseline-tested comparison of next-day forecasts.
+**Code:** https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb
+**Write-up:** https://github.com/adeviwon/hypecheck
+**Demo:** https://adeviwon.github.io/hypecheck/headlines.html
 
-## Before the team submits
-- [ ] Confirm registration and eligibility; use each member's registered email.
-- [ ] Enter Nathaniel Wong, Aaden Yick and Alastair Chu, each email and school; choose a team name. Do not publish private emails in the public repo.
-- [ ] Read the code, methods, limitations and actual results; each member must explain their contribution.
-- [ ] Open all submission links logged out; confirm saved notebook outputs are visible.
-- [ ] Run the notebook in a fresh Google Colab runtime to verify its Colab-only install step. Local CPU execution is separate evidence.
-- [ ] Confirm the rules declaration truthfully. Commit timestamps are evidence, not proof of compliance.
-- [ ] Optional: record an unlisted/publicly viewable demo, at most two minutes.
-- [ ] One member submits before November 15, 2026, 11:59 PM ET. Verify the confirmation. Latest on-time resubmission is judged.
+**Problem:** A beginner investor sees bullish memecoin posts and wonders whether they forecast tomorrow. We test rather than assume that claim.
 
-## Optional two-minute video script
-**0:00–0:15 — Problem.** “Memecoin timelines sound confident. We tested whether their sentiment adds information beyond price history—not whether we can make a convincing chart.”
+**Approach:** Prior-day original X-post sentiment for DOGE, SHIB, PEPE, BONK and FLOKI. Frozen pretrained FinTwitBERT features plus logistic regression; chronological splits with purge gaps, both requested baselines, coin/market ablations and text-kind comparisons.
 
-**0:15–1:15 — Demo.** Open the historical replay dashboard. Choose DOGE, 2026-10-10. Compare market-only and market-plus-X probabilities before revealing the outcome. Show the archived post and its availability time. Reveal the actual rise, despite the social model's roughly 33% probability of up. Then show the results table and sparse coverage. Do not imply the dates are live or this is a buy/sell recommendation.
+**Results:** Read the generated README and `docs/headline-report.json`; those are the source of truth. Do not copy an old headline number from a different model or split. Beating weak baselines on point accuracy does not demonstrate useful sentiment information. The study is exploratory on a reused period, not independent confirmation.
 
-**1:15–1:45 — Method/results.** “We used a pinned pretrained sentiment model, lagged market features, earlier train/validation dates and a purged held-out test. Sentiment scored 53.06% versus 53.68% market-only. Its Brier difference interval crosses zero. We did not demonstrate improvement.”
+**Investor boundary:** This project is a prototype and is not financial advice. No trade, profit, or causal-effect claim.
 
-**1:45–2:00 — Limits/next.** “Only 142 of 965 test coin-days had eligible posts. We'd collect a prospective archive and hand-label post intent. This project is a prototype and is not financial advice.”
+**Team:** Nathaniel Wong (model), Aaden Yick (data), Alastair Chu (demo and write-up), Malvern College Hong Kong. Confirm each member's exact email/name/school in the form. Email addresses and a demonstration video have not been supplied here.
 
-Official requirements: https://highschoolhackathon.org/briefs.html and https://highschoolhackathon.org/judges.html. Required code + approximately one-page write-up; video optional, maximum two minutes. No numerical word cap was found in the retrieved brief.
+**Execution evidence:** Notebook outputs were captured during a real clean-working-directory server run. Actual Google Colab execution is not claimed without Colab runtime evidence. The notebook installs its dependencies conditionally on Colab, fetches verified public inputs, and retrains the direction models.
+
+**Credits:** See README and notebook sources. AI coding assistance disclosed. Every team member must understand and explain the model and results.
