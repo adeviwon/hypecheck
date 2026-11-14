@@ -118,7 +118,8 @@ def code(text):
 md("""
 # HypeCheck — Signal or Noise?
 
-**Track: AI + Finance** · Veritas AI International High School Hackathon 2026 · Team: *add every member's full name here*
+**Track: AI + Finance** · Veritas AI International High School Hackathon 2026
+**Team:** Nathaniel Wong (model) · Aaden Yick (data) · Alastair Chu (demo and write-up) · Malvern College Hong Kong
 
 *This project is a prototype and is not financial advice.*
 
@@ -487,7 +488,7 @@ md("""
 ## 7 · Write-up
 
 **HypeCheck: Signal or Noise?**
-**Track:** AI + Finance · **Team:** *add every member's full name*
+**Track:** AI + Finance · **Team:** Nathaniel Wong (model), Aaden Yick (data), Alastair Chu (demo and write-up) — Malvern College Hong Kong
 
 *This project is a prototype and is not financial advice.*
 
@@ -568,7 +569,7 @@ md("""
 |---|---|
 | **Project title** | HypeCheck: Signal or Noise? |
 | **Building as** | Team |
-| **Team details** | *every member's full name, email and school, exactly as they should appear on certificates and awards* |
+| **Team details** | Nathaniel Wong (model) · Aaden Yick (data) · Alastair Chu (demo and write-up) — Malvern College Hong Kong. *Before submitting, paste each member's email here in that order, spelled as it should appear on certificates.* |
 | **Track** | AI + Finance |
 | **Starting point** | 4.2.4 News headlines and the stock market |
 | **One-sentence pitch** | HypeCheck takes a memecoin's X posts and its own price history and tells a beginner investor whether the hype carries any predictive signal at all — reporting honestly that, in our measured run, it does not. |

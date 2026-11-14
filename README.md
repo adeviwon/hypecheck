@@ -2,6 +2,8 @@
 
 **AI + Finance · Veritas AI Hackathon 2026**
 
+**Team:** Nathaniel Wong (model) · Aaden Yick (data) · Alastair Chu (demo and write-up) · Malvern College Hong Kong
+
 Does X sentiment add predictive information beyond market history for DOGE, SHIB, PEPE, BONK and FLOKI?
 
 **Finding:** this fixed retrospective experiment does **not demonstrate improved forecasts from sentiment**. Market + X has a higher (worse) held-out Brier score than market-only; the exploratory date-block uncertainty interval crosses zero. This is a research demo, not an edge, a live signal or a trading strategy.
@@ -150,6 +152,6 @@ The model sometimes confidently forecasts the wrong direction. The UI supports e
 - Libraries: PyTorch, Hugging Face Transformers, safetensors, scikit-learn, pandas, NumPy, PyArrow and Requests. Library licenses remain their own.
 - Evaluation guidance: https://scikit-learn.org/stable/common_pitfalls.html .
 - AI tools: Hermes Agent/OpenAI coding assistance was used for research, implementation, review and testing. The team must understand and explain all code and results before submission.
-- Hackathon rules: https://highschoolhackathon.org/briefs.html . Add the three team members' actual names in the submission form; this repository does not invent identities.
+- Hackathon rules: https://highschoolhackathon.org/briefs.html . Team: Nathaniel Wong (model), Aaden Yick (data), Alastair Chu (demo and write-up), Malvern College Hong Kong. The submission form also needs each member's email, spelled as it should appear on certificates.
 
 Code is MIT licensed. Third-party posts, model weights, market data and libraries retain their original terms.
