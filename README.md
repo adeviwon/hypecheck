@@ -11,6 +11,9 @@ Does archived X sentiment improve next-day forecasts beyond market history? **No
 - **Readiness and experiment comparison:** [SUBMISSION_AUDIT.md](SUBMISSION_AUDIT.md)
 - **Demo script and form checklist:** [SUBMISSION.md](SUBMISSION.md)
 
+## Concrete tweet tests
+[Read the complete real archived bearish-tweet ledger](tweet-tests/README.md): full texts, source links, fresh sentiment scores, frozen-model direction calls and correct/incorrect outcomes. This is an illustrative subset of already examined data, not a new independent accuracy claim.
+
 ## Measured results
 965 held-out coin-days across 193 shared UTC dates; earlier training/validation dates with one-day boundary purges. Lower Brier error is better.
 
