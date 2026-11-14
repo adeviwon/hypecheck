@@ -240,7 +240,9 @@ def main():
     print(f"  because {leak['test_rows_sharing_a_date_with_train']:.0%} of its test rows share a date with training rows.")
     print(f"  controls: real AUC {ctrl['real_auc']:.4f} vs label-permuted {ctrl['null_mean']:.4f} "
           f"(max {ctrl['null_max']:.4f}, p={ctrl['p_value']:.2f}) and feature-placebo {ctrl['placebo_mean']:.4f}.")
-    print("  A model that beats the majority baseline in 1 of 4 forward windows is not a trading signal.")
+    print(f"  The best walk-forward block beats its majority baseline in "
+          f"{c_best[1]['folds_beating_base']} of {c_best[1]['folds']} forward windows — real movement,"
+          f" not yet a trading signal.")
     print("=" * 100)
 
     out = dict(rows=len(M), dates=int(M.date.nunique()), posts=len(p),
