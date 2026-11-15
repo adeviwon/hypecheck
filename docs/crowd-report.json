@@ -1,0 +1,648 @@
+{
+  "reference": "ScamCheck uploaded sample: default word TF-IDF; balanced class-weight change; char_wb(2,5), sublinear TF, balanced C=10 trial; coefficient explanations.",
+  "primary_model": "Model 2",
+  "target": "Next full UTC day after snapshot cutoff, close > open; flat is not up",
+  "input": "A collection of same-coin posts available in the preceding 24 hours, including cutoff; frozen FinTwitBERT sample sentiment and train-only wording features.",
+  "base_coins": [
+    "DOGE",
+    "SHIB",
+    "PEPE",
+    "BONK",
+    "FLOKI"
+  ],
+  "excluded_training_coins": [
+    "WIF",
+    "TRUMP",
+    "NEIRO",
+    "PENGU",
+    "PNUT",
+    "TURBO",
+    "BOME",
+    "MEME"
+  ],
+  "training": {
+    "snapshots": 991,
+    "coin_days": 556,
+    "first": "2024-03-23",
+    "last": "2025-12-02"
+  },
+  "tests": {
+    "later_time": {
+      "Model 1": {
+        "accuracy": 0.36089238845144356,
+        "up_precision": 0.3734643734643734,
+        "up_recall": 0.39583333333333315,
+        "brier": 0.27664999837822973,
+        "confusion_coin_day_weighted": [
+          [
+            20.5,
+            42.49999999999999
+          ],
+          [
+            38.66666666666667,
+            25.333333333333332
+          ]
+        ],
+        "snapshots": 155,
+        "coin_days": 127,
+        "dates": 91
+      },
+      "Model 2": {
+        "accuracy": 0.3674540682414698,
+        "up_precision": 0.38914027149321256,
+        "up_recall": 0.4479166666666664,
+        "brier": 0.2767964887248351,
+        "confusion_coin_day_weighted": [
+          [
+            18.0,
+            44.99999999999999
+          ],
+          [
+            35.333333333333336,
+            28.666666666666664
+          ]
+        ],
+        "snapshots": 155,
+        "coin_days": 127,
+        "dates": 91
+      },
+      "Character trial": {
+        "accuracy": 0.4002624671916011,
+        "up_precision": 0.4075949367088606,
+        "up_recall": 0.41927083333333315,
+        "brier": 0.3418239005084898,
+        "confusion_coin_day_weighted": [
+          [
+            24.0,
+            38.99999999999999
+          ],
+          [
+            37.166666666666664,
+            26.833333333333332
+          ]
+        ],
+        "snapshots": 155,
+        "coin_days": 127,
+        "dates": 91
+      },
+      "Coin only": {
+        "accuracy": 0.5118110236220473,
+        "up_precision": 0.5199999999999998,
+        "up_recall": 0.4062499999999998,
+        "brier": 0.2531853728544946,
+        "confusion_coin_day_weighted": [
+          [
+            39.0,
+            23.999999999999996
+          ],
+          [
+            37.99999999999999,
+            25.999999999999996
+          ]
+        ],
+        "snapshots": 155,
+        "coin_days": 127,
+        "dates": 91
+      },
+      "Always up": {
+        "accuracy": 0.5039370078740159,
+        "up_precision": 0.5039370078740164,
+        "up_recall": 1.0,
+        "brier": 0.4960629921259843,
+        "confusion_coin_day_weighted": [
+          [
+            0.0,
+            63.000000000000014
+          ],
+          [
+            0.0,
+            64.00000000000003
+          ]
+        ],
+        "snapshots": 155,
+        "coin_days": 127,
+        "dates": 91
+      },
+      "Training majority": {
+        "accuracy": 0.4960629921259843,
+        "up_precision": 0.0,
+        "up_recall": 0.0,
+        "brier": 0.5039370078740159,
+        "confusion_coin_day_weighted": [
+          [
+            63.000000000000014,
+            0.0
+          ],
+          [
+            64.00000000000003,
+            0.0
+          ]
+        ],
+        "snapshots": 155,
+        "coin_days": 127,
+        "dates": 91
+      },
+      "Training prevalence": {
+        "accuracy": 0.4960629921259843,
+        "up_precision": 0.0,
+        "up_recall": 0.0,
+        "brier": 0.25025763958028613,
+        "confusion_coin_day_weighted": [
+          [
+            63.000000000000014,
+            0.0
+          ],
+          [
+            64.00000000000003,
+            0.0
+          ]
+        ],
+        "snapshots": 155,
+        "coin_days": 127,
+        "dates": 91
+      },
+      "Previous completed day": {
+        "accuracy": 0.4724409448818898,
+        "up_precision": 0.47692307692307667,
+        "up_recall": 0.4843749999999997,
+        "brier": 0.5275590551181103,
+        "confusion_coin_day_weighted": [
+          [
+            28.999999999999996,
+            34.0
+          ],
+          [
+            32.999999999999986,
+            30.999999999999996
+          ]
+        ],
+        "snapshots": 155,
+        "coin_days": 127,
+        "dates": 91
+      }
+    },
+    "unseen_coin_market": {
+      "Model 1": {
+        "accuracy": 0.4902597402597403,
+        "up_precision": 0.4198473282442748,
+        "up_recall": 0.40441176470588236,
+        "brier": 0.26498539856419917,
+        "confusion_coin_day_weighted": [
+          [
+            23.999999999999996,
+            19.0
+          ],
+          [
+            20.25,
+            13.75
+          ]
+        ],
+        "snapshots": 99,
+        "coin_days": 77,
+        "dates": 57
+      },
+      "Model 2": {
+        "accuracy": 0.4383116883116883,
+        "up_precision": 0.3865030674846626,
+        "up_recall": 0.46323529411764713,
+        "brier": 0.2662439139731796,
+        "confusion_coin_day_weighted": [
+          [
+            17.999999999999996,
+            25.0
+          ],
+          [
+            18.25,
+            15.750000000000002
+          ]
+        ],
+        "snapshots": 99,
+        "coin_days": 77,
+        "dates": 57
+      },
+      "Character trial": {
+        "accuracy": 0.4512987012987013,
+        "up_precision": 0.3987730061349693,
+        "up_recall": 0.47794117647058826,
+        "brier": 0.2970149357710606,
+        "confusion_coin_day_weighted": [
+          [
+            18.499999999999996,
+            24.5
+          ],
+          [
+            17.750000000000004,
+            16.25
+          ]
+        ],
+        "snapshots": 99,
+        "coin_days": 77,
+        "dates": 57
+      },
+      "Coin only": {
+        "accuracy": 0.5584415584415584,
+        "up_precision": 0.0,
+        "up_recall": 0.0,
+        "brier": 0.24836306369020536,
+        "confusion_coin_day_weighted": [
+          [
+            43.00000000000001,
+            0.0
+          ],
+          [
+            34.0,
+            0.0
+          ]
+        ],
+        "snapshots": 99,
+        "coin_days": 77,
+        "dates": 57
+      },
+      "Always up": {
+        "accuracy": 0.44155844155844154,
+        "up_precision": 0.44155844155844165,
+        "up_recall": 1.0,
+        "brier": 0.5584415584415584,
+        "confusion_coin_day_weighted": [
+          [
+            0.0,
+            43.00000000000001
+          ],
+          [
+            0.0,
+            34.0
+          ]
+        ],
+        "snapshots": 99,
+        "coin_days": 77,
+        "dates": 57
+      },
+      "Training majority": {
+        "accuracy": 0.5584415584415584,
+        "up_precision": 0.0,
+        "up_recall": 0.0,
+        "brier": 0.44155844155844154,
+        "confusion_coin_day_weighted": [
+          [
+            43.00000000000001,
+            0.0
+          ],
+          [
+            34.0,
+            0.0
+          ]
+        ],
+        "snapshots": 99,
+        "coin_days": 77,
+        "dates": 57
+      },
+      "Training prevalence": {
+        "accuracy": 0.5584415584415584,
+        "up_precision": 0.0,
+        "up_recall": 0.0,
+        "brier": 0.24868695625579323,
+        "confusion_coin_day_weighted": [
+          [
+            43.00000000000001,
+            0.0
+          ],
+          [
+            34.0,
+            0.0
+          ]
+        ],
+        "snapshots": 99,
+        "coin_days": 77,
+        "dates": 57
+      },
+      "Previous completed day": {
+        "accuracy": 0.5584415584415584,
+        "up_precision": 0.5,
+        "up_recall": 0.6176470588235294,
+        "brier": 0.44155844155844154,
+        "confusion_coin_day_weighted": [
+          [
+            21.999999999999996,
+            21.0
+          ],
+          [
+            12.999999999999998,
+            21.0
+          ]
+        ],
+        "snapshots": 99,
+        "coin_days": 77,
+        "dates": 57
+      }
+    }
+  },
+  "test_coverage": {
+    "later_time": {
+      "first_target_day": "2026-04-21",
+      "last_target_day": "2026-10-20",
+      "snapshots_per_coin": {
+        "DOGE": 76,
+        "PEPE": 45,
+        "FLOKI": 14,
+        "BONK": 13,
+        "SHIB": 7
+      }
+    },
+    "unseen_coin_market": {
+      "first_target_day": "2026-04-23",
+      "last_target_day": "2026-10-03",
+      "snapshots_per_coin": {
+        "PENGU": 35,
+        "TRUMP": 32,
+        "WIF": 12,
+        "MEME": 9,
+        "NEIRO": 4,
+        "PNUT": 3,
+        "BOME": 3,
+        "TURBO": 1
+      }
+    }
+  },
+  "training_post_count_range": [
+    1,
+    20
+  ],
+  "random_80_20_diagnostic": {
+    "metrics": {
+      "Model 1": {
+        "accuracy": 0.6645962732919255,
+        "up_precision": 0.6658653846153848,
+        "up_recall": 0.5995670995670997,
+        "brier": 0.22027783376562582,
+        "confusion_coin_day_weighted": [
+          [
+            60.83333333333335,
+            23.166666666666664
+          ],
+          [
+            30.83333333333333,
+            46.16666666666668
+          ]
+        ],
+        "snapshots": 199,
+        "coin_days": 161,
+        "dates": 133
+      },
+      "Model 2": {
+        "accuracy": 0.6677018633540373,
+        "up_precision": 0.6549450549450552,
+        "up_recall": 0.6450216450216452,
+        "brier": 0.2202723308959482,
+        "confusion_coin_day_weighted": [
+          [
+            57.83333333333335,
+            26.166666666666664
+          ],
+          [
+            27.33333333333333,
+            49.66666666666668
+          ]
+        ],
+        "snapshots": 199,
+        "coin_days": 161,
+        "dates": 133
+      },
+      "Character trial": {
+        "accuracy": 0.7391304347826086,
+        "up_precision": 0.7187500000000002,
+        "up_recall": 0.7467532467532471,
+        "brier": 0.18097199161557784,
+        "confusion_coin_day_weighted": [
+          [
+            61.50000000000002,
+            22.5
+          ],
+          [
+            19.5,
+            57.50000000000002
+          ]
+        ],
+        "snapshots": 199,
+        "coin_days": 161,
+        "dates": 133
+      },
+      "Coin only": {
+        "accuracy": 0.5279503105590062,
+        "up_precision": 0.5084745762711864,
+        "up_recall": 0.38961038961038963,
+        "brier": 0.24985134550868696,
+        "confusion_coin_day_weighted": [
+          [
+            55.00000000000001,
+            28.999999999999996
+          ],
+          [
+            47.000000000000014,
+            30.0
+          ]
+        ],
+        "snapshots": 199,
+        "coin_days": 161,
+        "dates": 133
+      },
+      "Always up": {
+        "accuracy": 0.4782608695652174,
+        "up_precision": 0.47826086956521746,
+        "up_recall": 1.0,
+        "brier": 0.5217391304347826,
+        "confusion_coin_day_weighted": [
+          [
+            0.0,
+            84.0
+          ],
+          [
+            0.0,
+            77.0
+          ]
+        ],
+        "snapshots": 199,
+        "coin_days": 161,
+        "dates": 133
+      },
+      "Training majority": {
+        "accuracy": 0.5217391304347826,
+        "up_precision": 0.0,
+        "up_recall": 0.0,
+        "brier": 0.4782608695652174,
+        "confusion_coin_day_weighted": [
+          [
+            84.0,
+            0.0
+          ],
+          [
+            77.0,
+            0.0
+          ]
+        ],
+        "snapshots": 199,
+        "coin_days": 161,
+        "dates": 133
+      },
+      "Training prevalence": {
+        "accuracy": 0.5217391304347826,
+        "up_precision": 0.0,
+        "up_recall": 0.0,
+        "brier": 0.24963554783348044,
+        "confusion_coin_day_weighted": [
+          [
+            84.0,
+            0.0
+          ],
+          [
+            77.0,
+            0.0
+          ]
+        ],
+        "snapshots": 199,
+        "coin_days": 161,
+        "dates": 133
+      },
+      "Previous completed day": {
+        "accuracy": 0.4409937888198758,
+        "up_precision": 0.4315789473684213,
+        "up_recall": 0.5324675324675326,
+        "brier": 0.5590062111801242,
+        "confusion_coin_day_weighted": [
+          [
+            29.999999999999996,
+            54.00000000000001
+          ],
+          [
+            36.0,
+            41.000000000000014
+          ]
+        ],
+        "snapshots": 199,
+        "coin_days": 161,
+        "dates": 133
+      }
+    },
+    "shared_train_test_dates": 112,
+    "status": "Exact sample split reproduced on historical training subset only; NOT a valid forecasting headline because shared dates/outcomes can leak."
+  },
+  "paired_accuracy_vs_coin_only": {
+    "later_time": {
+      "mean": -0.1443569553805774,
+      "interval95": [
+        -0.23759155912103244,
+        -0.03939410016977936
+      ],
+      "method": "1000 paired circular seven-observed-date block resamples; coins kept together"
+    },
+    "unseen_coin_market": {
+      "mean": -0.12012987012987013,
+      "interval95": [
+        -0.24142359470949457,
+        0.014947808426223293
+      ],
+      "method": "1000 paired circular seven-observed-date block resamples; coins kept together"
+    }
+  },
+  "top_words": {
+    "Model 1": {
+      "up": [
+        "trend",
+        "weekly",
+        "floki",
+        "bottom",
+        "eth",
+        "below",
+        "im",
+        "strongest",
+        "good",
+        "next",
+        "last",
+        "keep"
+      ],
+      "down": [
+        "from",
+        "longed",
+        "move",
+        "looking",
+        "today",
+        "early",
+        "down",
+        "memes",
+        "follow",
+        "fresh",
+        "ducconomics",
+        "there"
+      ]
+    },
+    "Model 2": {
+      "up": [
+        "trend",
+        "weekly",
+        "floki",
+        "bottom",
+        "eth",
+        "below",
+        "im",
+        "strongest",
+        "good",
+        "next",
+        "last",
+        "keep"
+      ],
+      "down": [
+        "from",
+        "longed",
+        "move",
+        "today",
+        "looking",
+        "early",
+        "down",
+        "memes",
+        "follow",
+        "fresh",
+        "ducconomics",
+        "there"
+      ]
+    },
+    "Character trial": {
+      "up": [
+        "eep ",
+        "ep ",
+        "elow ",
+        "eep",
+        "e ",
+        "gi",
+        " tren",
+        " la",
+        "est",
+        " im ",
+        "ia",
+        "out. "
+      ],
+      "down": [
+        "es ",
+        " te",
+        "ged",
+        "nged ",
+        "nged",
+        "onged",
+        "ged ",
+        "longe",
+        "y ",
+        " dow",
+        " down",
+        " fr"
+      ]
+    }
+  },
+  "test_reuse": "Exploratory: this archive and final dates have been examined before. Not independent confirmation.",
+  "adaptations": [
+    "Actual market outcomes replace invented labels; no 40-case quota.",
+    "Primary earlier/later calendar split with purge replaces random-row forecasting claims.",
+    "Unseen coins and later times test the sample geographic/time-shift analogue.",
+    "Class weights may improve UP recall but can harm precision or accuracy. A balanced model is not assumed better.",
+    "Character trial is reported; word Model 2 is predeclared for understandable explanations, not chosen because it wins test accuracy.",
+    "Each coin/target-day has total weight one across its snapshots.",
+    "Sentiment means estimated language in this archive sample, not full X sentiment or causal impact."
+  ]
+}
