@@ -30,6 +30,9 @@ The primary target is the next complete UTC day after the snapshot cutoff, open 
 ## Reproduction
 Use Python 3.12 and the pinned requirements. `python prepare_verification.py` restores exact legacy cache inputs; `python sample_pipeline.py` trains the current batch experiment; `python verify_submission.py` verifies the submission. Source/data downloads are version-pinned and hash-checked. Server notebook execution is not an actual Colab runtime test.
 
+## Verification
+Current evidence: [artifacts/crowd-verification.json](artifacts/crowd-verification.json): 15 executed cells, 96 Python tests, real new-text neural inference and approved independent review. Older submission-verification.json is explicitly archived.
+
 ## Sources and limits
 [Public post archive](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto), [FinTwitBERT](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), actual Binance market bars, scikit-learn and dependencies; Veritas AI sample pipeline; Hermes Agent/OpenAI coding assistance. Sparse, biased archive and previously explored test dates mean exploratory evidence, not independent confirmation. No complete live feed, independently calibrated probabilities, causal effect or trading recommendation.
 

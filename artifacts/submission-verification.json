@@ -16,5 +16,8 @@
   "checkout_relative_dom_test": "passed",
   "generator_idempotence": "passed",
   "runner_success_and_failure_tests": "passed",
-  "dependency_audit_refreshed": false
+  "dependency_audit_refreshed": false,
+  "archived": true,
+  "scope": "Historical submission verification only; not evidence for the current crowd-batch notebook",
+  "current_verification": "artifacts/crowd-verification.json"
 }
