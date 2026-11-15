@@ -2,10 +2,10 @@
 
 Supply a batch of public X posts about one memecoin. HypeCheck separates estimated sample sentiment, next-day direction and the evidence for trusting that prediction. No claim of all-X coverage or causal price impact.
 
-[Current Colab](https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb) · [Exact ScamCheck pipeline mapping](docs/scamcheck-pipeline-map.md)
+[Current Colab](https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb)
 
 ## What is actually trained
-Default word TF-IDF + logistic regression; then the same features with balanced class weights; then the exact character-ngram trial from the sample. Aggregate pinned FinTwitBERT sentiment and coin identity stay fixed between comparisons. The classifiers train on actual subsequent market outcomes, not model guesses. No transformer fine-tuning is claimed.
+Default word TF-IDF + logistic regression; then the same features with balanced class weights; then a character-pattern alternative. Aggregate pinned FinTwitBERT sentiment and coin identity stay fixed between comparisons. The classifiers train on actual subsequent market outcomes, not model guesses. No transformer fine-tuning is claimed.
 
 ## Honest results
 
@@ -31,9 +31,9 @@ The primary target is the next complete UTC day after the snapshot cutoff, open 
 Use Python 3.12 and the pinned requirements. `python prepare_verification.py` restores exact legacy cache inputs; `python sample_pipeline.py` trains the current batch experiment; `python verify_submission.py` verifies the submission. Source/data downloads are version-pinned and hash-checked. Server notebook execution is not an actual Colab runtime test.
 
 ## Verification
-Current evidence: [artifacts/crowd-verification.json](artifacts/crowd-verification.json): 15 executed cells, 96 Python tests, real new-text neural inference and approved independent review. Older submission-verification.json is explicitly archived.
+Current evidence: [artifacts/crowd-verification.json](artifacts/crowd-verification.json): recorded cell counts, test counts and genuine execution evidence. The model implementation received independent review; the presentation-only changes were rerun and regression-tested. Older submission-verification.json is explicitly archived.
 
 ## Sources and limits
-[Public post archive](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto), [FinTwitBERT](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), actual Binance market bars, scikit-learn and dependencies; Veritas AI sample pipeline; Hermes Agent/OpenAI coding assistance. Sparse, biased archive and previously explored test dates mean exploratory evidence, not independent confirmation. No complete live feed, independently calibrated probabilities, causal effect or trading recommendation.
+[Public post archive](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto), [FinTwitBERT](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), actual Binance market bars, scikit-learn and dependencies; Veritas AI participant reference notebook and Finance brief; Hermes Agent/OpenAI coding assistance. Sparse, biased archive and previously explored test dates mean exploratory evidence, not independent confirmation. No complete live feed, independently calibrated probabilities, causal effect or trading recommendation.
 
 **This project is a prototype and is not financial advice.**

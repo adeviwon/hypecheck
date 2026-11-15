@@ -27,7 +27,7 @@ prepare()
 
 run([sys.executable, '-m', 'unittest', '-v', 'test_pipeline.py', 'test_web.py',
      'test_headline_study.py', 'test_headline_artifacts.py', 'test_headline_http.py',
-     'test_prepare_verification.py', 'test_integration_readiness.py', 'test_expanded_inputs.py', 'test_colab_setup.py', 'test_notebook_readability.py','test_tweet_forecast.py','test_crowd_snapshot.py','test_sample_pipeline.py','test_crowd_app.py'])
+     'test_prepare_verification.py', 'test_integration_readiness.py', 'test_expanded_inputs.py', 'test_colab_setup.py', 'test_notebook_readability.py','test_tweet_forecast.py','test_crowd_snapshot.py','test_sample_pipeline.py','test_crowd_app.py','test_judge_tables.py'])
 run(['node', 'docs/app.js', '--self-test'])
 run(['node', 'test_dom.mjs'])
 run(['node', 'test_headline_dom.cjs'])

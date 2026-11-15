@@ -35,6 +35,20 @@ class ReadabilityTests(unittest.TestCase):
         for fragment in ["model1.fit(X_train", "model2.fit(X_train", "class_weight=\"balanced\"", "ngram_range=(2,5)", "C=10", "def inspect_errors", "actual_word_reasons", "error_type", "Missed UP", "False UP", "run_experiment(trainer=use_visible_models)"]:
             self.assertIn(fragment,code)
 
+    def test_no_reference_comparisons_outside_source_credits(self):
+        for cell in self.nb["cells"]:
+            if cell["cell_type"]=="markdown":
+                text="".join(cell["source"])
+                if not text.startswith("## Sources"):
+                    self.assertNotIn("ScamCheck",text)
+                    self.assertNotIn("Like the sample",text)
+    def test_examples_and_findings_are_human_readable(self):
+        code="\n".join("".join(c["source"]) for c in self.nb["cells"] if c["cell_type"]=="code")
+        text="\n".join("".join(c["source"]) for c in self.nb["cells"] if c["cell_type"]=="markdown")
+        for phrase in ["examples_table(train)","scores_table(","results_table(report)","What these examples show","What this result means"]:self.assertIn(phrase,code)
+        self.assertIn("Our findings, in plain English",text)
+        self.assertIn("not the probability",text.lower())
+
     def test_verified_source_and_support_parity(self):
         import colab_setup
         metadata = self.nb['metadata']['hypecheck']
