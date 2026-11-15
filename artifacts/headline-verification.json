@@ -1,9 +1,9 @@
 {
   "status": "passed",
-  "execution": "clean-directory server run, not actual Colab",
-  "notebook_seconds": 29.44,
+  "execution": "fresh-directory local Jupyter; cached sentiment; not actual Google Colab",
+  "notebook_seconds": 32.38,
   "code_cells_with_outputs": 13,
-  "python_tests": 44,
+  "python_tests": 58,
   "source_parity": true,
   "model_json_parity": true,
   "clean_report_exact_match": true,
@@ -17,7 +17,7 @@
   },
   "test_coin_days": 2509,
   "hashes": {
-    "HypeCheck.ipynb": "a33069964542f8a4f8ff75e0c0e9708fdd5f09ab199096e0199ae959e075dfc2",
+    "HypeCheck.ipynb": "7ec5c0411ae055b62caed23e442b34d15d63f483d8a46246e4389f5a513b957b",
     "README.md": "b8a6ffe74f38461142c0b490b86c8b65c6f3b7781a1116b40272af23696d43f9",
     "WRITEUP.md": "c079e991d6a43c47a6ebe8b19c2b1e53f8f0f6945a99d7231af093afc8c01ef1",
     "headline_study.py": "a2b36d884a58be19f43c1871e65a962fceb1e84820dabd703eb8ed9f4bd24307",
@@ -29,7 +29,13 @@
     "data/expanded-memecoin-daily.csv": "4ea2b737ee19daff97414a444ec3ea5313b797b78705e1b56dbf055bd5d47a56",
     "docs/headlines.html": "562b72c393e4f3007c1dcf4701016787626b911d3b6c6d18e813545c093f4b97",
     "docs/headlines.js": "b66afeeca366f29405943a8e9ad51e532ef30c9e211932b8632a418908110786",
-    "docs/headlines.css": "b302a7c50e488c8178949e8af4ca12e857852f786974f5a864af2c513a309962"
+    "docs/headlines.css": "b302a7c50e488c8178949e8af4ca12e857852f786974f5a864af2c513a309962",
+    "colab_setup.py": "48e912fec0f69329b2ed93ef5da6cca4890ec191fa6e84367eece7be2a246cb4",
+    "colab-loader.json": "689eff9618fa84f9f3353836af091d489571a0f99f070f1f12f1f84096c24b17",
+    "notebook_support.py": "e5dd57e29724851b18e5bd2ebfb9b226b4bb5a72be36b4144a51503ab2e01e70",
+    "test_notebook_readability.py": "3776bafdfb17f85c86e7580505ed743cd2c7e9e6c4826c5d15f018579b1ac4fb",
+    "build_headline_colab.py": "4f4a43bff6dbcc39455072d50a37d14eba9f55942b4ce72acc996d5c56eb9ca1",
+    "verify_submission.py": "f47f909c887e5c538cd4e02b62657b89de143801394ed43b03130c4481c45834"
   },
   "recompute_path": {
     "status": "passed",
@@ -45,12 +51,31 @@
       "Coin only": 0.0,
       "Market only": 0.0,
       "Market + sentiment": 0.0
-    }
+    },
+    "scope": "Historical pre-presentation notebook execution; not rerun for this layout change. Scientific source and data hashes remain identical."
   },
   "sentiment_inspection_regression": "passes with cache absent",
   "input_hashes": {
     "data/expanded-memecoin-daily.csv": "4ea2b737ee19daff97414a444ec3ea5313b797b78705e1b56dbf055bd5d47a56",
     "data/expanded-sentiment.json": "cee6a0649aa3484750e972593e27dd8d966639d5a8a6b1a1829ededcdce80ac2"
   },
-  "incoming_cleanup_preserved": true
+  "incoming_cleanup_preserved": true,
+  "compact_loader": {
+    "lines": 14,
+    "characters": 885,
+    "fresh_workspace_run": "passed",
+    "source_and_data_sha256_verification": true,
+    "recompute_toggle_unit_test": "passed"
+  },
+  "presentation": {
+    "html_outputs": 11,
+    "svg_charts": 1,
+    "largest_code_cell_characters": 1039,
+    "all_code_cells_executed": true,
+    "scientific_outputs_byte_identical": [
+      "docs/headline-report.json",
+      "artifacts/headline-predictions.csv",
+      "artifacts/headline-model.json"
+    ]
+  }
 }

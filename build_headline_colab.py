@@ -4,10 +4,11 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-BOOTSTRAP_REVISION = '2ce94ac955100ec37968fdfa404e3ae7af8e430b'
+BOOTSTRAP = json.loads((ROOT / 'colab-loader.json').read_text())
+BOOTSTRAP_REVISION = BOOTSTRAP['revision']
 BOOTSTRAP_HASHES = {
-    'colab_setup.py': '48e912fec0f69329b2ed93ef5da6cca4890ec191fa6e84367eece7be2a246cb4',
-    'notebook_support.py': 'e5dd57e29724851b18e5bd2ebfb9b226b4bb5a72be36b4144a51503ab2e01e70',
+    'colab_setup.py': BOOTSTRAP['sha256'],
+    'notebook_support.py': BOOTSTRAP['presentation_sha256'],
 }
 SOURCE_FILES = ['pipeline.py', 'headline_study.py', 'expanded_inputs.py',
                 'test_headline_study.py', 'test_expanded_inputs.py']
@@ -70,7 +71,8 @@ bootstrap += """for name, expected in VERIFIED_FILES.items():
         raise ValueError('Setup verification failed: ' + name)
     Path(name).write_bytes(payload)
 from colab_setup import prepare
-prepare()
+RECOMPUTE_SENTIMENT = False  #@param {type: "boolean"}
+prepare(recompute_sentiment=RECOMPUTE_SENTIMENT)
 from notebook_support import table, accuracy_table, accuracy_chart, replay
 """
 code(bootstrap, 'Download and verify the study files')
