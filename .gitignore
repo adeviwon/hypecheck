@@ -7,3 +7,4 @@ data/
 *.log
 *.part
 .DS_Store
+/public/qa-screenshots/

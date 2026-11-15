@@ -5,7 +5,12 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+
+if sys.version_info < (3, 12):
+    raise SystemExit('Use Python 3.12+ with pinned requirements; tested on Python 3.12.14.')
+
 import colab_setup
+from prepare_verification import prepare
 
 ROOT = Path(__file__).resolve().parent
 
@@ -18,9 +23,11 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+prepare()
+
 run([sys.executable, '-m', 'unittest', '-v', 'test_pipeline.py', 'test_web.py',
      'test_headline_study.py', 'test_headline_artifacts.py', 'test_headline_http.py',
-     'test_expanded_inputs.py', 'test_colab_setup.py', 'test_notebook_readability.py','test_tweet_forecast.py'])
+     'test_prepare_verification.py', 'test_integration_readiness.py', 'test_expanded_inputs.py', 'test_colab_setup.py', 'test_notebook_readability.py','test_tweet_forecast.py'])
 run(['node', 'docs/app.js', '--self-test'])
 run(['node', 'test_dom.mjs'])
 run(['node', 'test_headline_dom.cjs'])

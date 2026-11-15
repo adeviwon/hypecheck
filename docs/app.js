@@ -263,6 +263,7 @@
     $('chart-caption').textContent = `${rows.length} available ${$('coin').value} test records · dates equally spaced; missing dates are not interpolated. Vertical marker: selected date. ${$('reveal').checked ? 'Circles mark realized direction at 0% or 100%; these are outcomes, not forecast probabilities.' : 'Realized outcomes remain hidden.'} Exact selected-date estimates appear above.`;
   }
   async function load() {
+    document.documentElement?.classList.add('report-loading');
     try {
       const response = await fetch('report.json', { cache: 'no-store' });
       if (!response.ok) throw new Error(`Report request returned HTTP ${response.status}.`);
@@ -281,6 +282,12 @@
     } catch (error) {
       $('load-status').classList.add('error');
       $('load-status').textContent = 'The local research report could not be loaded. No predictions or results are available. Serve this folder over HTTP with report.json beside index.html, then refresh. ' + (error instanceof SyntaxError ? 'The report is not valid JSON.' : text(error.message));
+    } finally {
+      // Paint the final layout while lower sections are still hidden, then reveal them.
+      if (typeof requestAnimationFrame === 'function') {
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }
+      document.documentElement?.classList.remove('report-loading');
     }
   }
   $('coin').addEventListener('change', updateDates);
