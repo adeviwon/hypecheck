@@ -49,4 +49,13 @@ class SampleTests(unittest.TestCase):
  def test_random_split_is_flagged_diagnostic(self):
   d=self.a["report"]["random_80_20_diagnostic"]
   self.assertGreater(d["shared_train_test_dates"],0);self.assertIn("NOT a valid",d["status"])
+ def test_historical_csv_input_matches_training_features(self):
+  for _,row in self.later.head(5).iterrows():
+   csv=historical_csv(row)
+   snapshot=parse_csv(csv,row.coin,row.cutoff.isoformat())
+   texts=[p["text"] for p in snapshot.posts]
+   self.assertEqual(texts,row.texts)
+   self.assertEqual(snapshot.audit["unknown_timestamps"],0)
+   actual=batch_features(texts,row.sentiment_scores,row.coin)
+   for key in SOCIAL:self.assertAlmostEqual(actual[key],row[key])
 if __name__=="__main__":unittest.main()

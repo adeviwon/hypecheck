@@ -41,7 +41,9 @@ def dataset():
   for cutoff in history.available_at.drop_duplicates():
    day=cutoff.floor("D")+pd.Timedelta(days=1);previous=cutoff.floor("D")-pd.Timedelta(days=1)
    if day not in bars.index or previous not in bars.index:continue
-   batch=history[(history.available_at>=cutoff-pd.Timedelta(hours=24)) & (history.available_at<=cutoff)].tail(200)
+   batch=history[(history.available_at>=cutoff-pd.Timedelta(hours=24)) & (history.available_at<=cutoff)].copy()
+   batch["dedupe_key"]=batch.text.apply(lambda t:" ".join(t.split()))
+   batch=batch.drop_duplicates("dedupe_key",keep="first").tail(200)
    texts=batch.text.tolist();scores=batch[["bullish","bearish","neutral"]].to_dict("records")
    features=batch_features(texts,scores,coin);bar=bars.loc[day];prior=bars.loc[previous]
    features.update(date=day,cutoff=cutoff,actual_up=int(bar.close>bar.open),actual_return=float(bar.close/bar.open-1),
@@ -180,6 +182,10 @@ def score_batch(texts):
    with torch.inference_mode():probs=model(**encoded).logits.softmax(-1).cpu().numpy()
    for text,values in zip(batch,probs):known[text]={k:float(values[i]) for k,i in labels.items()}
  return [known[t] for t in texts]
+
+def historical_csv(row):
+ _,posts,_,_=load();indexed=posts.set_index(posts.tweet_id.astype(str));part=indexed.loc[row["source_ids"], ["text","available_at"]].copy()
+ part["available_at_utc"]=part.available_at.map(lambda t:t.isoformat());return part[["text","available_at_utc"]].to_csv(index=False)
 
 def batch_check(text,coin,cutoff=None,artifact=None,input_format="posts"):
  if input_format not in ["posts","csv"]:raise ValueError("Choose posts or csv")
