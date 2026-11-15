@@ -1,9 +1,9 @@
 {
   "status": "passed",
   "execution": "clean-directory server run, not actual Colab",
-  "notebook_seconds": 29.44,
-  "code_cells_with_outputs": 13,
-  "python_tests": 44,
+  "notebook_seconds": 30.73,
+  "code_cells_with_outputs": 12,
+  "python_tests": 48,
   "source_parity": true,
   "model_json_parity": true,
   "clean_report_exact_match": true,
@@ -17,7 +17,7 @@
   },
   "test_coin_days": 2509,
   "hashes": {
-    "HypeCheck.ipynb": "a33069964542f8a4f8ff75e0c0e9708fdd5f09ab199096e0199ae959e075dfc2",
+    "HypeCheck.ipynb": "62b28efc4a83b16c7e140f61d02d0f8b9565ffc827eb52aa7b89265b6dcfea92",
     "README.md": "b8a6ffe74f38461142c0b490b86c8b65c6f3b7781a1116b40272af23696d43f9",
     "WRITEUP.md": "c079e991d6a43c47a6ebe8b19c2b1e53f8f0f6945a99d7231af093afc8c01ef1",
     "headline_study.py": "a2b36d884a58be19f43c1871e65a962fceb1e84820dabd703eb8ed9f4bd24307",
@@ -29,7 +29,9 @@
     "data/expanded-memecoin-daily.csv": "4ea2b737ee19daff97414a444ec3ea5313b797b78705e1b56dbf055bd5d47a56",
     "docs/headlines.html": "562b72c393e4f3007c1dcf4701016787626b911d3b6c6d18e813545c093f4b97",
     "docs/headlines.js": "b66afeeca366f29405943a8e9ad51e532ef30c9e211932b8632a418908110786",
-    "docs/headlines.css": "b302a7c50e488c8178949e8af4ca12e857852f786974f5a864af2c513a309962"
+    "docs/headlines.css": "b302a7c50e488c8178949e8af4ca12e857852f786974f5a864af2c513a309962",
+    "colab_setup.py": "48e912fec0f69329b2ed93ef5da6cca4890ec191fa6e84367eece7be2a246cb4",
+    "colab-loader.json": "aeafc4b3214ee520a9193443e5c4eae452bc630793a2b1dfe138f8a1f0543371"
   },
   "recompute_path": {
     "status": "passed",
@@ -52,5 +54,12 @@
     "data/expanded-memecoin-daily.csv": "4ea2b737ee19daff97414a444ec3ea5313b797b78705e1b56dbf055bd5d47a56",
     "data/expanded-sentiment.json": "cee6a0649aa3484750e972593e27dd8d966639d5a8a6b1a1829ededcdce80ac2"
   },
-  "incoming_cleanup_preserved": true
+  "incoming_cleanup_preserved": true,
+  "compact_loader": {
+    "lines": 11,
+    "characters": 634,
+    "fresh_workspace_run": "passed",
+    "source_and_data_sha256_verification": true,
+    "recompute_toggle_unit_test": "passed"
+  }
 }

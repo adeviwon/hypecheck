@@ -1,12 +1,8 @@
 """Generate the expanded study in the organiser sample's narrative sequence."""
-import base64,hashlib,json,zlib
+import json
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent
-SOURCES={n:(ROOT/n).read_text() for n in ['pipeline.py','headline_study.py','expanded_inputs.py','test_headline_study.py','test_expanded_inputs.py']}
-inputs={}
-for name in ['expanded-memecoin-daily.csv','expanded-sentiment.json']:
- data=(ROOT/'data'/name).read_bytes()
- inputs['data/'+name]={'sha256':hashlib.sha256(data).hexdigest(),'zlib_base64':base64.b64encode(zlib.compress(data)).decode()}
+LOADER=json.loads((ROOT/'colab-loader.json').read_text())
 cells=[]
 def md(s):cells.append({'cell_type':'markdown','metadata':{},'source':s.strip().splitlines(keepends=True)})
 def code(s):cells.append({'cell_type':'code','execution_count':None,'outputs':[],'metadata':{},'source':s.strip().splitlines(keepends=True)})
@@ -25,7 +21,7 @@ The section sequence follows the sample: load → inspect → split → baseline
 
 *This project is a prototype and is not financial advice.*
 """)
-code("""import sys,subprocess,os,json,hashlib,urllib.request,base64,zlib
+code("""import sys,subprocess,json,hashlib,urllib.request
 from pathlib import Path
 IN_COLAB='google.colab' in sys.modules
 if IN_COLAB:
@@ -36,32 +32,24 @@ print('Runtime:',sys.version,'Colab:',IN_COLAB)
 print('The default direction classifiers are trained during this run.')
 """)
 md("""## 1. Load the data
-The original posts are downloaded from a fixed Hugging Face revision and SHA-256 checked. The daily market panel contains actual Binance spot OHLCV bars for DOGE, SHIB, PEPE, BONK, FLOKI, WIF, TRUMP, NEIRO, PENGU, PNUT, TURBO, BOME and MEME, ending before the fixed evaluation horizon.
+Load archived posts, real daily prices and pretrained sentiment scores. The short loader fetches a **fixed version** from GitHub and verifies every file with SHA-256. No API keys.
 
-For reliable Colab access, the notebook embeds compressed, hash-checked copies of the exact price panel and frozen pretrained sentiment cache. These are data, not cached forecasts. We cite Binance's market-data terms, which remain separate from our code licence. Our exact source code is embedded too; no moving-branch dependency or credentials.
+[Setup code](https://github.com/adeviwon/hypecheck/blob/main/colab_setup.py) · [Model code](https://github.com/adeviwon/hypecheck/blob/main/headline_study.py)
 """)
-source="SOURCES = "+repr(SOURCES)+chr(10)
-source+="""for name,text in SOURCES.items():
-    Path(name).write_text(text)
-    print('Wrote',name)
-"""
-code(source)
-load="EMBEDDED_INPUTS = "+repr(inputs)+chr(10)
-load+="""for name,item in EMBEDDED_INPUTS.items():
-    payload=zlib.decompress(base64.b64decode(item['zlib_base64']))
-    if hashlib.sha256(payload).hexdigest()!=item['sha256']:raise ValueError('Embedded input was changed: '+name)
-    Path(name).write_bytes(payload)
-    print('Verified',name,len(payload),'bytes')
+url="https://raw.githubusercontent.com/adeviwon/hypecheck/"+LOADER["revision"]+"/colab_setup.py"
+loader="setup_url="+repr(url)+chr(10)
+loader+="payload=urllib.request.urlopen(setup_url,timeout=30).read()"+chr(10)
+loader+="if hashlib.sha256(payload).hexdigest()!="+repr(LOADER["sha256"])+":raise ValueError(\"Setup file changed\")".replace('\\\"','"')+chr(10)
+loader+="""Path("colab_setup.py").write_bytes(payload)
+from colab_setup import prepare
+RECOMPUTE_SENTIMENT=False
+prepare(recompute_sentiment=RECOMPUTE_SENTIMENT)
 import pipeline as core
 from expanded_inputs import select_posts,load,split_data,COINS
-RECOMPUTE_SENTIMENT=False
-if RECOMPUTE_SENTIMENT:
-    Path('data/expanded-sentiment.json').unlink(missing_ok=True)
-    Path('.cache/expanded-headlines/data/sentiment.json').unlink(missing_ok=True)
-raw,_=core.load_posts()  # pinned public source download + SHA verification
-print('Verified original source rows:',len(raw))
+raw,_=core.load_posts()
+print(f"Loaded {len(raw):,} archived posts.")
 """
-code(load)
+code(loader)
 md("""## 2. Look at the data before training
 Keep original posts, bounded nonempty text, exact supported ticker tags and earliest exact-text duplicates. The later of publication and archive collection time is conservative availability. A post from day d feeds only the forecast for day d+1.
 
@@ -201,7 +189,7 @@ print('Protocol tests passed. Runtime evidence above distinguishes actual Colab 
 md("""## Sources and credits
 - Public original posts: https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto ; dataset revision and SHA are in pipeline.py. Third-party post terms remain their own.
 - Frozen sentiment: https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment ; pinned revision in pipeline.py, original work by Stephan Akkerman and Tim Koornstra.
-- Actual Binance spot daily OHLCV bars, exact verified panel embedded above. Field definitions: https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#klinecandlestick-data . Market data is not relicensed as our code.
+- Actual Binance spot daily OHLCV bars, exact verified panel downloaded above. Field definitions: https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#klinecandlestick-data . Market data is not relicensed as our code.
 - Original source and older independent hourly/BTC research remain credited in the repository; expanded primary models use daily bars, not invented hourly inputs.
 - PyTorch, Transformers, scikit-learn, pandas, NumPy, PyArrow, Requests and dependencies.
 - Hermes Agent / OpenAI coding assistance for research, implementation, review and testing. The team must understand and explain every part.
