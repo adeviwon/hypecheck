@@ -26,7 +26,7 @@ We test whether sentiment in the previous UTC day's **original X posts** adds in
 
 **Study status:** the final period was examined in previous work. This is a reproducible exploratory extension, not a new untouched confirmatory test. Empty-workspace execution and results are retained below.
 """)
-code("""import sys, subprocess, os, json, hashlib, urllib.request, base64, zlib
+code("""import sys, subprocess, json, hashlib, urllib.request, base64, zlib
 from pathlib import Path
 IN_COLAB = 'google.colab' in sys.modules
 if IN_COLAB:

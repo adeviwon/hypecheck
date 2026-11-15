@@ -1,6 +1,6 @@
 """Aggregate tweet hype to the coin-day, then ask: does aggregate hype move the coin?"""
 import os
-import numpy as np, pandas as pd
+import pandas as pd
 from scipy import stats
 ROOT="/home/ubuntu/Projects/hypecheck"
 M=pd.read_csv("/tmp/hype_meter_rows.csv")

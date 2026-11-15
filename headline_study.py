@@ -1,8 +1,7 @@
 """Does prior-day X-post sentiment predict next-day memecoin direction?
 Frozen dates, prior-only features, and text-kind sensitivity; no causal claim.
 """
-import argparse,json,re
-from pathlib import Path
+import json,re
 import numpy as np
 import pandas as pd
 from sklearn.metrics import brier_score_loss
@@ -104,7 +103,7 @@ def main():
   predictions['Kind: '+k]=p;kinds.append(row)
  for row,p in zip(kinds,holm([r['block_sign_p'] for r in kinds])):row['holm_adjusted_p']=p
  # Both controls refit on training data; do not merely shuffle labels when scoring existing predictions.
- features=core.SOCIAL;real=predictions[primary];null=[];placebo=[];rng=np.random.default_rng(42)
+ features=core.SOCIAL;null=[];placebo=[];rng=np.random.default_rng(42)
  for _ in range(20):
   labels=rng.permutation(train.actual_up.to_numpy())
   m=core.classifier(features,selection[primary]['C']).fit(train,labels)

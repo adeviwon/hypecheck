@@ -1,5 +1,5 @@
 """Re-aggregate with the learned meter, and re-test whether aggregate hype moves the coin."""
-import os, json
+import os
 import numpy as np, pandas as pd
 from sklearn.linear_model import LogisticRegression, Ridge
 from sklearn.ensemble import GradientBoostingClassifier

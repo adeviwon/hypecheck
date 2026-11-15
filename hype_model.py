@@ -1,7 +1,7 @@
 """Model the coin-day: can aggregate hype predict the coin's next move, or its size?"""
 import numpy as np, pandas as pd
 from sklearn.linear_model import LogisticRegression, Ridge
-from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
+from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, roc_auc_score, r2_score
 from scipy import stats

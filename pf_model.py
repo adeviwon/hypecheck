@@ -1,7 +1,7 @@
 """Does a tweet's wording tell you whether buying the memecoin paid off?
 Same evaluation discipline as the first HypeCheck: baselines, a feature ladder,
 an honest time split, and two controls that try to destroy the result."""
-import json, sys
+import json
 import numpy as np, pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import GradientBoostingClassifier

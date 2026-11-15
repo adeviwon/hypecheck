@@ -1,8 +1,8 @@
 """Same-day event study: what actually happens in the minutes after a memecoin tweet?
 Placebo = the same computation at random minutes in the same day, so a null means something."""
-import glob, os, json
+import os
 import numpy as np, pandas as pd
-from scipy.stats import mannwhitneyu, ttest_ind
+from scipy.stats import mannwhitneyu
 
 from pathlib import Path
 

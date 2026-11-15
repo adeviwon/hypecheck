@@ -1,6 +1,6 @@
 """Build a -1..+1 hype meter per tweet, validate it, aggregate to the coin-day,
 and correlate aggregate hype with the coin's performance."""
-import json, os
+import json
 import numpy as np, pandas as pd
 from scipy import stats
 ROOT="/home/ubuntu/Projects/hypecheck"

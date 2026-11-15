@@ -1,5 +1,5 @@
 """Build the merged dataset: tweets about pump.fun-era memecoins + prices + whether the trade paid."""
-import json, glob, os, re
+import json, os
 import numpy as np, pandas as pd
 
 ROOT="/home/ubuntu/Projects/hypecheck"
