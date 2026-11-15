@@ -1,165 +1,228 @@
-"""Generate the current paste-tweet prediction submission, with visible actual training."""
-import json,hashlib
+"""Reproduce the actual ScamCheck experiment sequence for crowd forecasts."""
+import json
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent
-cfg=json.loads((ROOT/"tweet-forecast-source.json").read_text())
-bootstrap=json.loads((ROOT/"colab-loader.json").read_text())
-cells=[]
+cfg=json.loads((ROOT/"crowd-source.json").read_text());bootstrap=json.loads((ROOT/"colab-loader.json").read_text());cells=[]
 def md(s):cells.append({"cell_type":"markdown","metadata":{},"source":s.strip().splitlines(keepends=True)})
 def code(s,form=False):cells.append({"cell_type":"code","metadata":{"cellView":"form"} if form else {},"source":s.strip().splitlines(keepends=True),"execution_count":None,"outputs":[]})
-md("""# HypeCheck — paste a post, test a forecast
-**AI + Finance · Nathaniel Wong, Aaden Yick, Alastair Chu · Malvern College Hong Kong**
+md("""# HypeCheck — test the crowd, not just a tweet
+**Veritas AI International High School Hackathon 2026 · AI + Finance**
+**Team:** Nathaniel Wong · Aaden Yick · Alastair Chu — Malvern College Hong Kong
 
-**Our user:** a trader reading a public X post about a memecoin. **Input:** its text, selected coin and optional earlier public discussion. **Output:** an estimated probability of next-day UP and a research-only return estimate.
+**Our user:** a trader who sees many public posts about one memecoin and wonders whether the wording and crowd sentiment deserve forecasting trust. **Input:** a batch of public posts. **Output:** estimated sample sentiment, a next-day direction estimate, and the evidence against simple baselines.
 
-The target is the **next complete UTC calendar day, open to close**, not the next 24 hours and not movement caused by this tweet. Wording is trained directly against actual market outcomes, not an AI sentiment label. This is a genuine predictive model, but prediction does not guarantee accuracy.
+**Bottom line:** this experiment does not demonstrate a forecasting edge. We report that rather than turn a weak model into trading advice.
 
-**Run:** Runtime → Run all. Change the text and coin in **Section 9** and rerun that cell. [Browser input demo](https://adeviwon.github.io/hypecheck/predict.html).
+**Runtime → Run all.** Section 5 visibly trains Model 1; Section 8 makes the exact balanced-weight change and character-ngram trial from ScamCheck. Section 9 runs the trained batch forecast and offers an optional interactive app. Source setup is collapsed; data loading stays short.
 
-**Bottom line:** these models did not beat the training-majority direction rule. Recent-context and magnitude predictions are experiments, not validated trading signals. The reused archive makes this exploratory. No live X feed is connected.
+**ScamCheck mapping:** original examples → baseline → word model → mistakes → out-of-distribution tests → balanced model → character trial → word explanations → results and limits. Its challenge used team-written modern US-style messages against older UK SMS. We use actual later prices and excluded memecoins, not fictional financial labels. [Exact experiment map](https://github.com/adeviwon/hypecheck/blob/main/docs/scamcheck-pipeline-map.md).
 
-*This project is a prototype and is not financial advice.*
+*This project is a prototype and is not financial advice. No complete or live X feed, causal impact or trading skill is claimed. This reused archive is exploratory, not independent confirmation.*
 """)
-code("""#@title Automatic environment and verified source setup
-import sys,subprocess,json,hashlib,urllib.request
+code("""#@title Automatic environment setup
+import sys,subprocess,json,hashlib,urllib.request,contextlib,io
 from pathlib import Path
 IN_COLAB="google.colab" in sys.modules
 if IN_COLAB:
-    pins=["numpy==2.5.4","pandas==3.1.1","pyarrow==26.0.1","scikit-learn==1.9.1","requests==2.34.2","ipython==9.18.1"]
+    pins=["numpy==2.5.4","pandas==3.1.1","pyarrow==26.0.1","scikit-learn==1.9.1","requests==2.34.2","ipython==9.18.1","ipywidgets==8.1.9","transformers==5.23.0","safetensors==0.8.0"]
     subprocess.run([sys.executable,"-m","pip","install","-q",*pins],check=True)
+print("Environment ready; actual Google Colab runtime:",IN_COLAB)
 """,True)
-code("\nSETUP_REV="+repr(bootstrap["revision"])+"\nSETUP_SHA="+repr(bootstrap["sha256"])+"\nSOURCE_REV="+repr(cfg["revision"])+"\nSOURCE_FILES="+repr(cfg["files"])+"\n"+"""
-files={"colab_setup.py":(SETUP_REV,SETUP_SHA),"notebook_support.py":(SETUP_REV,'e5dd57e29724851b18e5bd2ebfb9b226b4bb5a72be36b4144a51503ab2e01e70'),**{n:(SOURCE_REV,h) for n,h in SOURCE_FILES.items()}}
-for name,(rev,expected) in files.items():
-    url=f"https://raw.githubusercontent.com/adeviwon/hypecheck/{rev}/{name}"
+setup="SETUP_REV="+repr(bootstrap["revision"])+"\nBOOTSTRAP="+repr({"colab_setup.py":bootstrap["sha256"],"notebook_support.py":bootstrap["presentation_sha256"]})+"\nSOURCE_REV="+repr(cfg["revision"])+"\nSOURCE_FILES="+repr(cfg["files"])+"\n"
+setup+="""for name,(revision,expected) in {**{n:(SETUP_REV,h) for n,h in BOOTSTRAP.items()},**{n:(SOURCE_REV,h) for n,h in SOURCE_FILES.items()}}.items():
+    url=f"https://raw.githubusercontent.com/adeviwon/hypecheck/{revision}/{name}"
     with urllib.request.urlopen(url,timeout=60) as response:payload=response.read()
-    if hashlib.sha256(payload).hexdigest()!=expected:raise ValueError("Changed source: "+name)
+    if hashlib.sha256(payload).hexdigest()!=expected:raise ValueError("Changed verified file: "+name)
     Path(name).write_bytes(payload)
 from colab_setup import prepare
 prepare()
 import numpy as np,pandas as pd
+from IPython.display import display,HTML
 from notebook_support import table,accuracy_chart
-import contextlib,io
-from tweet_forecast import load,build_examples,split_data,weights,features,train_all,predict
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import brier_score_loss
-print("Environment ready. Actual Colab runtime:",IN_COLAB)
-""",True)
+from sample_pipeline import *
+print("Pinned sources and actual market inputs verified; no downloaded forecasts.")
+"""
+code(setup,True)
 md("""## 1. Load the data
-Original public posts and actual Binance daily market bars for 13 memecoins. No hand-picked bullish/bearish quota. The setup verifies the exact source and data before loading. Price labels are **actual market outcomes**, not model guesses.
+Real original public X posts and actual daily Binance prices. Frozen FinTwitBERT estimates language sentiment; next-day labels come from the **actual market**, not the sentiment model. The downstream forecast models are trained during this run. Transformers are **not fine-tuned**.
 """)
-code("""raw,posts,prices,panel=load()
-examples=build_examples(posts,prices)
-print(f"{len(posts):,} original posts; {len(examples):,} eligible post/coin events; {len(prices)} coins.")
+code("""frame,train,later,unseen=dataset()
+print(f"Training: {len(train):,} snapshots; later-time test: {len(later):,}; unseen-coin test: {len(unseen):,}.")
 """)
-md("""## 2. Inspect before training
-A post can mention multiple coins. Repeated posts on one coin-day share its market outcome; they are not independent tests. Recent discussion includes at most 20 posts in the preceding 24 hours, strictly before the input post becomes available. No later likes, views or price moves are features.
+md("""## 2. Look at the data first
+Like ScamCheck, read the source examples before fitting. Each row is a same-coin batch observed by a particular UTC cutoff, using the preceding 24 hours. Several snapshots can share one coin-day outcome, so each coin-day gets total weight one. Sentiment describes this supplied archive sample, not all of X.
 """)
-code("""table(examples[["available_at","date","coin","text","context_posts","actual_up"]].head(5),"Real posts and actual market labels")
-assert (examples.available_at<examples.date).all()
-assert (examples.context_latest.isna()|(examples.context_latest<examples.available_at)).all()
-print("Input and context timestamps precede the prediction target.")
+code("""table(train[["cutoff","date","coin","text","post_count","bullish","bearish","actual_up"]].head(5).assign(text=lambda x:x.text.str.slice(0,350)),"Real historical inputs and market labels")
+print("Established training coins:",BASE_COINS)
+print("Excluded from supervised training:",NEW_COINS)
 """)
-md("""## 3. Split chronologically
-Shared training/validation/test dates and a one-day purge. Fit vocabularies and coefficients on training only; choose regularisation using validation Brier error. Keep final dates out of fitting. Earlier research examined these dates, so this is **not independent confirmation**.
-""")
-code("""train,validation,test=[examples[examples.date.isin(p.date.unique())].copy() for p in split_data(panel)]
-table(pd.DataFrame([{ "partition":name,"events":len(d),"coin_days":len(d[["date","coin"]].drop_duplicates()),"first":str(d.date.min().date()),"last":str(d.date.max().date())} for name,d in [("train",train),("validation",validation),("test",test)]]))
-assert train.date.max()+pd.Timedelta(days=1)<validation.date.min()
-assert validation.date.max()+pd.Timedelta(days=1)<test.date.min()
-""")
-md("""## 4. Baselines
-Always up, training-majority, training prevalence and coin-only. Persistence uses the **last completed UTC day at the posting time**, not the still-unfinished posting day. All methods use exactly the same observed-post test cases. Each coin-day has total weight one divided over its posts.
-""")
-code("""from tweet_forecast import evaluate
-prevalence=np.average(train.actual_up,weights=weights(train))
-baselines={"Always up":np.ones(len(test)),"Training majority":np.full(len(test),float(prevalence>=.5)),"Previous completed day":test.previous_completed_day.to_numpy()}
-table(pd.DataFrame([{ "method":name,**evaluate(test,p)} for name,p in baselines.items()]))
-""")
-md("""## 5. Model — actual visible training
-Character TF-IDF learns wording patterns; logistic regression learns next-day direction from real price labels. We train separate tweet-only and tweet-plus-context models, with a coin-only control. Transformers are **not fine-tuned** here. Brier error measures probability error; lower is better. The function below is passed into the real training procedure: its `.fit(...)` calls produce the saved model used by the demo.
-""")
-code("""def train_direction(train,validation,context=False,coin_only=False):
-    encoder=features(context=context,coin_only=coin_only)
-    X_train=encoder.fit_transform(train)
-    X_validation=encoder.transform(validation)
-    candidates=[]
-    for C in [0.01,0.1,1.0]:
-        model=LogisticRegression(C=C,max_iter=1500,random_state=42)
-        model.fit(X_train,train.actual_up,sample_weight=weights(train))
-        p=model.predict_proba(X_validation)[:,1]
-        loss=brier_score_loss(validation.actual_up,p,sample_weight=weights(validation))
-        candidates.append((float(loss),C,model))
-    loss,C,model=min(candidates,key=lambda row:(row[0],row[1]))
-    return encoder,model,{"C":C,"validation_brier":loss}
+md("""## 3. Split into training and test sets
+ScamCheck uses stratified random 80/20 with random_state=42. We reproduce that **diagnostic** on historical training data, but do not use its score as forecasting evidence: related snapshots and market dates can appear on both sides.
 
+The primary financial test instead uses earlier calendar dates for training and the final 20% of the price calendar for testing, with a purge. The later-time set uses established coins; the other set uses coins excluded from training. Multi-coin posts mentioning excluded assets are removed from the established training cohort. This is new-to-training data, **not independent confirmation**: the archive was explored before.
+""")
+code("""from sklearn.model_selection import train_test_split
+random_train,random_test=train_test_split(train,test_size=.2,stratify=train.actual_up,random_state=42)
+table(pd.DataFrame([{ "set":name,"snapshots":len(d),"coin_days":len(d[["date","coin"]].drop_duplicates()),"dates":d.date.nunique(),"first":str(d.date.min().date()),"last":str(d.date.max().date())} for name,d in [("Training",train),("Later dates",later),("Unseen coins",unseen)]]))
+assert train.date.max()+pd.Timedelta(days=1)<min(later.date.min(),unseen.date.min())
+print("Random diagnostic shared dates:",len(set(random_train.date)&set(random_test.date)))
+""")
+md("""## 4. Baselines: simple rules before AI
+ScamCheck always predicts not-spam. We report always-up, training majority/prevalence, coin-only and the previous **completed** UTC-day direction at the snapshot cutoff. No unfinished-day close is allowed.
+
+Report accuracy, precision and recall for UP, confusion matrices and **Brier error** (probability error; lower is better). Methods use identical rows and coin-day weights. A high accuracy alone does not establish forecasting value.
+""")
+code("""from sklearn.linear_model import LogisticRegression
+coin_encoder=encoder(coin_only=True)
+coin_model=LogisticRegression(max_iter=1000).fit(coin_encoder.fit_transform(train),train.actual_up,sample_weight=weight(train))
+base_models={"Coin only":(coin_encoder,coin_model)}
+for label,part in [("Later dates",later),("Unseen coins",unseen)]:
+    scores,_=evaluate(base_models,train,part)
+    table(pd.DataFrame([{ "method":name,**{k:v for k,v in row.items() if not k.startswith("confusion")}} for name,row in scores.items()]),label)
+""")
+md("""## 5. Model 1: TF-IDF + logistic regression
+The same default word TF-IDF and logistic regression as ScamCheck. Our fixed extra features represent estimated batch sentiment and coin identity; they remain unchanged between Model 1 and balanced Model 2. TF-IDF and scaling fit only training data. The label is whether the next complete UTC day closes above its open.
+""")
+code("""from sklearn.compose import ColumnTransformer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import StandardScaler,OneHotEncoder
+vec=TfidfVectorizer()
+word_encoder=ColumnTransformer([("text",vec,"text"),("numeric",StandardScaler(),SOCIAL),("coin",OneHotEncoder(handle_unknown="ignore"),["coin"])])
+X_train=word_encoder.fit_transform(train)
+model1=LogisticRegression(max_iter=1000)
+model1.fit(X_train,train.actual_up,sample_weight=weight(train))
+models={"Model 1":(word_encoder,model1),**base_models}
+score1,pred1=evaluate(models,train,later)
+table(pd.DataFrame([{ "method":name,**{k:v for k,v in row.items() if not k.startswith("confusion")}} for name,row in score1.items()]),"Model 1 on later dates")
+table(pd.DataFrame(score1["Model 1"]["confusion_coin_day_weighted"],columns=["Predicted DOWN/FLAT","Predicted UP"]),"Rows: actual DOWN/FLAT, actual UP; counts are coin-day weighted")
+""")
+md("""## 6. Where Model 1 goes wrong
+Like the sample, inspect five actual held-out errors. A missed UP and a false-UP forecast are different mistakes. Neither has a universal financial cost: losses depend on returns, fees and execution. These are errors, not fabricated successful demonstrations.
+""")
+code("""def inspect_errors(part,prep,model,title):
+    p=model.predict_proba(prep.transform(part))[:,1]
+    bad=part[((p>=.5)!=part.actual_up)].copy()
+    bad["estimated_up"]=p[((p>=.5)!=part.actual_up)]
+    bad["error_type"]=np.where(bad.actual_up.eq(1),"Missed UP","False UP")
+    bad["estimated_language"]=np.where(bad.bullish>bad.bearish,"More bullish","More bearish/neutral")
+    saved=export(prep,model)
+    def reasons(row):
+        explanation=infer(saved,row.to_dict())
+        key="toward_up" if row.estimated_up>=.5 else "toward_down"
+        return ", ".join(x["word"] for x in explanation[key][:3])
+    shown=bad.head(5).copy();shown["actual_word_reasons"]=shown.apply(reasons,axis=1)
+    table(shown[["date","coin","error_type","actual_up","estimated_up","actual_word_reasons","text"]].assign(text=lambda x:x.text.str.slice(0,250)),title)
+    table(bad.groupby(["error_type","estimated_language"]).size().reset_index(name="raw_snapshot_errors"),"Observed failure patterns; snapshots are dependent")
+    print(title+":",len(bad),"wrong of",len(part),"raw snapshots")
+inspect_errors(later,word_encoder,model1,"Model 1: later-time errors")
+""")
+md("""## 7. Our addition: later time and another coin market
+ScamCheck tests 40 self-written modern US-style messages after training on older UK SMS. We cannot invent future market outcomes, so our analogue uses **every eligible real later-date snapshot** and a separate **unseen-coin-market cohort**, not a 15/25 or 40-case quota. Their prices determine the labels.
+
+We also inspect the top 12 word coefficients, as the sample does. These describe this fitted model, not economic laws or evidence that a word caused a price move.
+""")
+code("""market_scores,_=evaluate(models,train,unseen)
+table(pd.DataFrame([{ "method":name,**{k:v for k,v in row.items() if not k.startswith("confusion")}} for name,row in market_scores.items()]),"Model 1: genuinely excluded coin cohort")
+words=np.array(word_encoder.named_transformers_["text"].get_feature_names_out())
+coef=model1.coef_[0][word_encoder.output_indices_["text"]]
+table(pd.DataFrame({"toward_UP":words[np.argsort(coef)[-12:][::-1]],"toward_DOWN":words[np.argsort(coef)[:12]]}),"Model 1: top word coefficients")
+""")
+md("""## 8. Improvement experiment: balanced class weights
+Make **exactly one change**, as ScamCheck does: class_weight=balanced. Keep the vocabulary, numeric features, training rows and target fixed. The purpose is to test class-imbalance behaviour, not assume that catching more UP days improves trading decisions. Report both tests again, whether results improve or worsen.
+""")
+code("""model2=LogisticRegression(max_iter=1000,class_weight="balanced")
+model2.fit(X_train,train.actual_up,sample_weight=weight(train))
+models["Model 2"]=(word_encoder,model2)
+for label,part in [("Later dates",later),("Unseen coins",unseen)]:
+    result,_=evaluate(models,train,part)
+    table(pd.DataFrame([{ "method":name,**{k:v for k,v in row.items() if not k.startswith("confusion")}} for name,row in result.items() if name in ["Model 1","Model 2"]]),label+": before and after the one change")
+    inspect_errors(part,word_encoder,model2,"Model 2: "+label+" errors")
+""")
+md("""### One alternative we tried: character n-grams
+Reproduce the sample trial: char_wb, ngrams (2,5), sublinear TF, balanced logistic regression and C=10. Keep the same sentiment and coin features. Show all results. The word-balanced model is predeclared as the readable demo, **not selected because it wins on test accuracy**. Looking at these reused tests cannot establish an independent improvement.
+""")
+code("""cvec=TfidfVectorizer(analyzer="char_wb",ngram_range=(2,5),sublinear_tf=True)
+char_encoder=ColumnTransformer([("text",cvec,"text"),("numeric",StandardScaler(),SOCIAL),("coin",OneHotEncoder(handle_unknown="ignore"),["coin"])])
+cmodel=LogisticRegression(max_iter=1000,class_weight="balanced",C=10)
+cmodel.fit(char_encoder.fit_transform(train),train.actual_up,sample_weight=weight(train))
+models["Character trial"]=(char_encoder,cmodel)
+def use_visible_models(data):
+    return models if data.index.equals(train.index) else fit_models(data)
 with contextlib.redirect_stdout(io.StringIO()):
-    artifact,report=train_all(trainer=train_direction)
-table(pd.DataFrame(report["metrics"]).T.reset_index(),"Held-out direction predictions")
-table(pd.DataFrame(report["selection"]).T.reset_index(),"Validation-only choices")
-accuracy_chart({"metrics":report["metrics"],"primary_model":"tweet_only"},["tweet_only","tweet_and_context","coin_only","training_majority"])
+    artifact,report=run_experiment(trainer=use_visible_models)
+for name in ["later_time","unseen_coin_market"]:
+    table(pd.DataFrame([{ "model":m,**{k:v for k,v in row.items() if not k.startswith("confusion")}} for m,row in report["tests"][name].items()]),name)
+print("Random 80/20 is diagnostic only:",report["random_80_20_diagnostic"]["status"])
+table(pd.DataFrame([{ "model":m,"diagnostic_accuracy":v["accuracy"]} for m,v in report["random_80_20_diagnostic"]["metrics"].items()]),"Do not confuse this with future forecasting")
 """)
-md("""## 6. Where the model goes wrong
-Show confident errors, not just convincing examples. These mistakes are not used to tune the model. Probabilities are uncalibrated estimates, not guarantees.
+md("""## 9. The demo: explain a batch forecast
+ScamCheck explains using TF-IDF × coefficient. We do the same for words in the supplied batch and keep sentiment/coin contributions separate. The first demonstration uses the **first eligible held-out historical snapshot**, transported as quoted CSV to preserve blank lines inside original posts. It is an illustration, not an independent test.
+
+The three panels distinguish estimated language sentiment, a price-direction model estimate, and whether the evidence supports trusting it. No causal price-impact estimate or guaranteed return is shown.
 """)
-code("""predictions=pd.read_csv("artifacts/tweet-forecast-predictions.csv")
-wrong=predictions[(predictions.tweet_only>=.5)!=predictions.actual_up].copy()
-wrong["confidence"]=(wrong.tweet_only-.5).abs()
-table(wrong.nlargest(5,"confidence")[["date","coin","actual_up","tweet_only","log_return"]])
+code("""from crowd_app import panels,build_app
+example=later.iloc[0]
+result=batch_check(historical_csv(example),example.coin,example.cutoff.isoformat(),artifact=artifact,input_format="csv")
+for content in panels(result,report):display(HTML(content))
+print("Historical reveal — actual next-day direction:","UP" if example.actual_up else "DOWN / FLAT")
+table(pd.DataFrame(result["toward_up"]+result["toward_down"]),"Actual word × TF-IDF contributions (logit units)")
 """)
-md("""## 7. Our addition — public discussion context
-A separate model can use preceding public discussion as well as the input post. This tests whether broader wording context contributes, rather than assuming a tweet acts alone. No context supplied means the separately trained **tweet-only** model is used. Texts must already be public at prediction time; the app does not fetch X automatically.
+md("""### Optional interactive app
+Set RUN_APP=True and run the next cell. Paste public posts separated by blank lines, or CSV with a text column; choose a coin and click Analyse batch. Use CSV if an individual post itself contains blank lines. New text runs actual pinned FinTwitBERT inference, then the fitted forecast model—no phrase-list fallback.
+
+Blank cutoff means actual submission time in UTC; exact next-day dates are displayed. A pasted old post is analysed at that submission time, not silently backtested. Supplied timestamps can be checked for window consistency, but their authenticity and complete platform coverage are not independently verified. No live X feed is connected.
 """)
-code("""table(pd.DataFrame(report["metrics"]).T.reset_index())
+code("""#@title Open the real batch input app
+RUN_APP=False #@param {type:"boolean"}
+if RUN_APP:
+    ui,app_state,controls=build_app(artifact)
+    display(ui)
+else:
+    print("Optional app is off so Run all finishes. Set RUN_APP=True to enter your batch.")
+""")
+md("""## 10. Results summary
+Compare the same rows before and after balanced weights, plus the character alternative. UP precision/recall expose the tradeoff that accuracy alone hides. Full confusion matrices and test support are saved in the report. The chart uses a full 0–100% axis.
+""")
+code("""table(pd.DataFrame([{ "test":test_name,"model":name,"accuracy":row["accuracy"],"UP_precision":row["up_precision"],"UP_recall":row["up_recall"],"Brier":row["brier"]} for test_name,test in report["tests"].items() for name,row in test.items()]),"Complete measured comparison")
+accuracy_chart({"primary_model":"Model 2","metrics":report["tests"]["later_time"]},["Model 1","Model 2","Character trial","Coin only","Training majority"])
 print("Paired date-block accuracy differences vs coin-only:",report["paired_accuracy_vs_coin_only"])
 """)
-md("""## 8. How much movement? A separate return experiment
-A ridge regression learns actual next-day log returns, with training-only extreme-value clipping. Its output estimates the **whole coin return**, not the effect attributable to this tweet. Compare error with a constant trained without text; a larger error is worse. This head did not beat that baseline and must not be presented as a useful magnitude predictor.
-""")
-code("""table(pd.DataFrame(report["return_metrics"]).T.reset_index())
-print("Units: percentage-point mean absolute error; lower is better.")
-""")
-md("""## 9. The demo — enter a public tweet
-Edit the input fields and run this cell. The supplied sentence is an **illustrative editable input**, not a selected successful test. Inference uses the saved weights actually trained above. An estimated probability change relative to coin-only is a model comparison, **not causal impact**.
-""")
-code("""#@title Paste a public post and run the trained forecast
-TWEET="DOGE is breaking resistance with increasing trading volume." #@param {type:"string"}
-COIN="DOGE" #@param ["DOGE","SHIB","PEPE","BONK","FLOKI","WIF","TRUMP","NEIRO","PENGU","PNUT","TURBO","BOME","MEME"]
-RECENT_PUBLIC_POSTS="" #@param {type:"string"}
-result=predict(TWEET,COIN,RECENT_PUBLIC_POSTS,artifact=artifact)
-table(pd.DataFrame([{"Output":k,"Value":str(v)} for k,v in result.items()]))
-""")
-md("""## 10. Results and what a trader can conclude
-The model produces predictions but has not demonstrated an edge over simple baselines. Do **not** use a bullish model output as an independently justified reason to trade. An honest negative finding helps challenge misplaced confidence in social posts; it is not a profitable trading system.
+md("""## 11. Limitations and next steps
+- This is a sparse archive, not every public post about a coin. Estimated sample sentiment is not validated full-population sentiment.
+- The later-time and unseen-coin experiments use actual prices but reused dates; they are exploratory, not independent confirmation. Small per-coin samples limit conclusions.
+- Balanced weights may increase UP recall while worsening false alarms or accuracy. They do not create trading skill. The character trial can overfit and gives less readable fragments.
+- Probabilities are not independently calibrated. No profitability, fees/slippage, causal effect or useful return-magnitude forecast is established. Do not invert a losing model after seeing test labels and call that a new validated strategy.
+- Next: gather a genuinely new timestamped public sample, freeze this protocol and evaluate prospectively; test whether users understand the evidence warnings.
 
-The evaluation is sparse, retrospective and reused. Neither accuracy nor a return estimate accounts for fees, slippage or trade execution. Public post text can be misleading or sarcastic. We have not independently calibrated probabilities, collected a complete feed, established causation or tested a prospective deployment.
+**Investor boundary:** this prototype does not justify trading because a batch sounds bullish or the model predicts UP. Its useful result is demonstrating how apparent text-based confidence can fail a fair future-market test.
 """)
-code("""for filename in ["test_tweet_forecast.py"]:
+code("""for filename in ["test_crowd_snapshot.py","test_sample_pipeline.py","test_crowd_app.py"]:
     completed=subprocess.run([sys.executable,filename],text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     print(completed.stdout);completed.check_returncode()
-print("Training outputs saved as safe JSON; no pickled estimator. Actual Colab:",IN_COLAB)
+print("Saved safe JSON models and genuine outputs. Actual Google Colab runtime:",IN_COLAB)
 """)
-md("""## 11. Sources and responsibility
-- Public original-post archive: Stephan Akkerman, financial-tweets-crypto on Hugging Face, pinned revision and hash in pipeline.py. Text is not independently human-verified sentiment ground truth.
-- Binance daily spot market bars, frozen and hash-checked in expanded_inputs.py. Third-party terms remain applicable.
-- scikit-learn, NumPy, pandas, PyArrow and Requests. Raw wording models here use TF-IDF, logistic regression and ridge regression; they do not fine-tune a pretrained transformer.
-- Veritas AI Finance brief and sample submission structure. Hermes Agent/OpenAI coding assistance; the team must understand and explain all work.
+md("""## Sources
+- [financial-tweets-crypto](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto), pinned revision and source hash in pipeline.py.
+- [FinTwitBERT sentiment](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), pinned safe weights; scores are model estimates, not human gold labels.
+- Actual Binance spot daily bars, frozen and hash-checked. [Market-data documentation](https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#klinecandlestick-data).
+- scikit-learn, PyTorch, Transformers, safetensors, NumPy, pandas, PyArrow, IPython and ipywidgets.
+- Veritas AI ScamCheck sample notebook and Finance brief: same experiment sequence with documented adaptations for temporal finance data. [Exact mapping](https://github.com/adeviwon/hypecheck/blob/main/docs/scamcheck-pipeline-map.md).
+- Hermes Agent/OpenAI coding assistance. The team must understand and explain the work. Third-party data/model terms remain applicable.
 
-This project is a prototype and is not financial advice.
+*This project is a prototype and is not financial advice.*
 """)
-nb={"nbformat":4,"nbformat_minor":5,"metadata":{"colab":{"toc_visible":True},"kernelspec":{"display_name":"Python 3","language":"python","name":"python3"},"language_info":{"name":"python"},"hypecheck":{"universe":"tweet-to-next-day","source_sha256":cfg["files"],"bootstrap_revision":bootstrap["revision"],"bootstrap_sha256":{"colab_setup.py":bootstrap["sha256"],"notebook_support.py":bootstrap["presentation_sha256"]},"quota_sampling":False,"expected_code_cells":sum(c["cell_type"]=="code" for c in cells)}},"cells":cells}
-path=ROOT/"HypeCheck.ipynb"
+metadata={"colab":{"toc_visible":True},"kernelspec":{"display_name":"Python 3","language":"python","name":"python3"},"language_info":{"name":"python"},"hypecheck":{"universe":"crowd-snapshot-scamcheck-protocol","quota_sampling":False,"expected_code_cells":sum(c["cell_type"]=="code" for c in cells),"source_sha256":cfg["files"],"bootstrap_revision":bootstrap["revision"],"bootstrap_sha256":{"colab_setup.py":bootstrap["sha256"],"notebook_support.py":bootstrap["presentation_sha256"]}}}
+nb={"nbformat":4,"nbformat_minor":5,"metadata":metadata,"cells":cells};path=ROOT/"HypeCheck.ipynb"
 if path.exists():
  old=json.loads(path.read_text());a=[c for c in cells if c["cell_type"]=="code"];b=[c for c in old["cells"] if c["cell_type"]=="code"]
  if [c["source"] for c in a]==[c["source"] for c in b]:
   for x,y in zip(a,b):x["outputs"]=y.get("outputs",[]);x["execution_count"]=y.get("execution_count")
 path.write_text(json.dumps(nb,ensure_ascii=False,indent=1)+chr(10))
-report=json.loads((ROOT/"docs/tweet-forecast-report.json").read_text())
-readme="# HypeCheck — public-post market forecast\n\nPaste a public tweet, choose its memecoin and get an estimated next-UTC-day direction. Optional earlier public posts supply recent context. No live X feed is connected.\n\n[Open the submission in Colab](https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb) · [Try the trained browser model](https://adeviwon.github.io/hypecheck/predict.html)\n\n## Actual training\nRaw wording → train-only character TF-IDF → trained logistic regression for direction. A separate ridge regression estimates whole-coin return, not a tweet-caused effect. The notebook visibly fits the models using actual market outcomes. This is not transformer fine-tuning.\n\n## Honest held-out results\n\n| Method | Coin-day-weighted accuracy |\n|---|---:|\n"
-for name,row in report["metrics"].items():readme+="| "+name+" | "+format(100*row["accuracy"],".2f")+"% |\n"
-readme+="\nTraining: 1,451 post/coin events across 859 coin-days. Validation: 71 events across 55 coin-days. Test: 271 events across 219 coin-days and 112 shared dates. Reused archive: exploratory, not independent confirmation. Neither wording model beats the training-majority baseline. Return estimates do not beat the training-constant error baseline.\n\n## Use\nIn Colab select Runtime → Run all, then edit Section 9. The static browser demo runs the same safe-JSON model locally, without uploading text. The target is the next complete UTC day, open to close, not the next 24 hours.\n\n## Local reproduction\nUse **Python 3.12** (verified on 3.12.14) and Node.js 22+ for the UI checks. From the repository root:\n\n```bash\npython3.12 -m venv .venv\nsource .venv/bin/activate\npython -m pip install -r requirements.txt\npython verify_submission.py\npython tweet_forecast.py\npython serve.py --port 8000\n```\n\nOpen http://localhost:8000/predict.html. The gate restores the archived sentiment-cache subset from the pinned expanded cache, requiring an exact match to its original manifest hash; it does not synthesize scores or rerun neural inference. The public source archive downloads on first use if absent. Server verification does not constitute a live Google Colab test. Optional cross-browser regression instructions are in `qa_playwright.py`; its Playwright dependency is separate from model-training requirements.\n\n## Sources and limits\nPublic financial-tweets-crypto archive, actual Binance daily market bars, scikit-learn and dependencies; pinned revisions and hashes are in source. Hermes Agent/OpenAI assisted coding. No causal impact identification, no independently calibrated probabilities, no validated trading edge, no complete live sentiment feed. Older files are retrospective research, not an alternative current submission.\n\n**This project is a prototype and is not financial advice.**\n"
+r=json.loads((ROOT/"docs/crowd-report.json").read_text())
+readme="# HypeCheck — test the crowd\n\nSupply a batch of public X posts about one memecoin. HypeCheck separates estimated sample sentiment, next-day direction and the evidence for trusting that prediction. No claim of all-X coverage or causal price impact.\n\n[Current Colab](https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb) · [Exact ScamCheck pipeline mapping](docs/scamcheck-pipeline-map.md)\n\n## What is actually trained\nDefault word TF-IDF + logistic regression; then the same features with balanced class weights; then the exact character-ngram trial from the sample. Aggregate pinned FinTwitBERT sentiment and coin identity stay fixed between comparisons. The classifiers train on actual subsequent market outcomes, not model guesses. No transformer fine-tuning is claimed.\n\n## Honest results\n\n| Model | Later-time accuracy | Unseen-coin accuracy |\n|---|---:|---:|\n"
+for name in r["tests"]["later_time"]:
+ readme+="| "+name+" | "+format(r["tests"]["later_time"][name]["accuracy"],".2%")+" | "+format(r["tests"]["unseen_coin_market"][name]["accuracy"],".2%")+" |\n"
+readme+="\nAll accuracy is coin-day weighted. Training: "+str(r["training"]["snapshots"])+" snapshots / "+str(r["training"]["coin_days"])+" coin-days. Later-time test: "+str(r["tests"]["later_time"]["Model 2"]["snapshots"])+" snapshots / "+str(r["tests"]["later_time"]["Model 2"]["coin_days"])+" coin-days. Unseen-coin test: "+str(r["tests"]["unseen_coin_market"]["Model 2"]["snapshots"])+" snapshots / "+str(r["tests"]["unseen_coin_market"]["Model 2"]["coin_days"])+" coin-days. The word-balanced model fails the coin-only control in both tests. No demonstrated forecasting edge.\n\n## Use\nRuntime → Run all. Section 5 visibly fits Model 1; Section 8 fits balanced Model 2 and the character trial. Section 9 runs a genuine historical batch and offers the optional multi-post/CSV app. New text runs the actual pinned pretrained sentiment network. Missing/invalid models or inputs block forecasting rather than fabricate scores.\n\nThe primary target is the next complete UTC day after the snapshot cutoff, open to close, not the next 24 hours. Blank runtime cutoff means the actual submission time; old pasted text is not an automatic backtest.\n\n## Reproduction\nUse Python 3.12 and the pinned requirements. `python prepare_verification.py` restores exact legacy cache inputs; `python sample_pipeline.py` trains the current batch experiment; `python verify_submission.py` verifies the submission. Source/data downloads are version-pinned and hash-checked. Server notebook execution is not an actual Colab runtime test.\n\n## Sources and limits\n[Public post archive](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto), [FinTwitBERT](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), actual Binance market bars, scikit-learn and dependencies; Veritas AI sample pipeline; Hermes Agent/OpenAI coding assistance. Sparse, biased archive and previously explored test dates mean exploratory evidence, not independent confirmation. No complete live feed, independently calibrated probabilities, causal effect or trading recommendation.\n\n**This project is a prototype and is not financial advice.**\n"
 (ROOT/"README.md").write_text(readme)
-# Keep the approximately one-page submission write-up free of local setup instructions.
-writeup = readme.split('## Local reproduction\n', 1)[0] + '## Sources and limits\n' + readme.split('## Sources and limits\n', 1)[1]
-(ROOT/"WRITEUP.md").write_text(writeup)
-print("Generated current tweet-input notebook:",len(cells),"cells")
+(ROOT/"WRITEUP.md").write_text(readme.split("## Reproduction\n")[0]+"## Sources and limits\n"+readme.split("## Sources and limits\n")[1])
+print("Generated ScamCheck-matched crowd notebook:",len(cells),"cells")

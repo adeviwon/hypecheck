@@ -27,7 +27,7 @@ prepare()
 
 run([sys.executable, '-m', 'unittest', '-v', 'test_pipeline.py', 'test_web.py',
      'test_headline_study.py', 'test_headline_artifacts.py', 'test_headline_http.py',
-     'test_prepare_verification.py', 'test_integration_readiness.py', 'test_expanded_inputs.py', 'test_colab_setup.py', 'test_notebook_readability.py','test_tweet_forecast.py'])
+     'test_prepare_verification.py', 'test_integration_readiness.py', 'test_expanded_inputs.py', 'test_colab_setup.py', 'test_notebook_readability.py','test_tweet_forecast.py','test_crowd_snapshot.py','test_sample_pipeline.py','test_crowd_app.py'])
 run(['node', 'docs/app.js', '--self-test'])
 run(['node', 'test_dom.mjs'])
 run(['node', 'test_headline_dom.cjs'])
@@ -43,14 +43,15 @@ for name, expected in colab_setup.FILE_DIGESTS.items():
     assert digest(ROOT / name) == expected, name
 for name, expected in metadata['source_sha256'].items():
     assert digest(ROOT / name) == expected, name
-    assert json.loads((ROOT / "tweet-forecast-source.json").read_text())["files"][name] == expected,name
+    assert json.loads((ROOT / "crowd-source.json").read_text())["files"][name] == expected,name
 config = json.loads((ROOT / 'colab-loader.json').read_text())
 assert config['revision'] == metadata['bootstrap_revision']
 assert config['sha256'] == metadata['bootstrap_sha256']['colab_setup.py']
 assert config['presentation_sha256'] == metadata['bootstrap_sha256']['notebook_support.py']
 for name, expected in metadata['bootstrap_sha256'].items():
     assert digest(ROOT / name) == expected, name
-assert any("model.fit(X_train,train.actual_up" in "".join(c["source"]) for c in code)
+assert any("model1.fit(X_train,train.actual_up" in "".join(c["source"]) for c in code)
+assert any("model2.fit(X_train,train.actual_up" in "".join(c["source"]) for c in code)
 assert not any("EMBEDDED_INPUTS =" in "".join(c["source"]) or "SOURCES =" in "".join(c["source"]) for c in code)
 paths = [ROOT / name for name in ['HypeCheck.ipynb', 'README.md', 'requirements.lock.txt', 'docs/headline-predictions.json']]
 before = {path.name: digest(path) for path in paths}

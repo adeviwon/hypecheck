@@ -24,18 +24,23 @@ class ReadabilityTests(unittest.TestCase):
     def test_reading_route_and_plain_language(self):
         text = '\n'.join(''.join(cell['source']) for cell in self.nb['cells'] if cell['cell_type'] == 'markdown')
         for phrase in ('Our user:', 'Bottom line:', 'Runtime → Run all', '## 1. Load',
-                       '## 4. Baselines', '## 6. Where', '## 8. How much',
-                       '## 9. The demo', '## 10. Results', '## 11. Sources',
+                       '## 4. Baselines', '## 6. Where', '## 8. Improvement',
+                       '## 9. The demo', '## 10. Results', '## 11. Limitations',
                        'Brier error', 'not independent confirmation', 'not fine-tuned'):
             self.assertIn(phrase, text)
         self.assertTrue(self.nb['metadata']['colab']['toc_visible'])
+
+    def test_reference_training_and_error_analysis_are_executed(self):
+        code="\n".join("".join(c["source"]) for c in self.nb["cells"] if c["cell_type"]=="code")
+        for fragment in ["model1.fit(X_train", "model2.fit(X_train", "class_weight=\"balanced\"", "ngram_range=(2,5)", "C=10", "def inspect_errors", "actual_word_reasons", "error_type", "Missed UP", "False UP", "run_experiment(trainer=use_visible_models)"]:
+            self.assertIn(fragment,code)
 
     def test_verified_source_and_support_parity(self):
         import colab_setup
         metadata = self.nb['metadata']['hypecheck']
         for name, digest in metadata['source_sha256'].items():
             self.assertEqual(hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), digest)
-            config=json.loads((ROOT / "tweet-forecast-source.json").read_text())
+            config=json.loads((ROOT / "crowd-source.json").read_text())
             self.assertEqual(config["files"][name], digest)
         for name, digest in metadata['bootstrap_sha256'].items():
             self.assertEqual(hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), digest)

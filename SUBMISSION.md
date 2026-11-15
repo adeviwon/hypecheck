@@ -1,17 +1,19 @@
-# HypeCheck — current submission
+# HypeCheck — current crowd-batch submission
 
 Track: AI + Finance
 
-Code: https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb
-
-Demo: https://adeviwon.github.io/hypecheck/predict.html
+Notebook: https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb
 
 Write-up: WRITEUP.md
 
-Nathaniel Wong — model; Aaden Yick — data; Alastair Chu — demo. Team member emails and school details must be confirmed in the submission form.
+Nathaniel Wong — model; Aaden Yick — data; Alastair Chu — demo. Confirm individual emails and school details in the submission form.
 
-The model is trained from raw public-post wording against actual next-UTC-day Binance outcomes. Section 5 visibly trains; Section 9 accepts a tweet and coin. The forecast is not a causal impact estimate. No live X feed is connected. Training and notebook execution were verified on the server, not an actual Colab runtime.
+Use Runtime → Run all. Sections 5 and 8 visibly train the actual reference model sequence. Section 9 explains a real batch and offers RUN_APP=True for new public posts or CSV. The app derives sentiment from supplied content, then predicts next-full-UTC-day direction. No complete X-feed coverage or causal impact is claimed.
 
-Held-out coin-day-weighted accuracy: tweet-only 49.28%; tweet plus prior context 45.02%; training majority 51.60%. No demonstrated trading edge. Return error also fails its constant baseline. Full numbers and limitations: docs/tweet-forecast-report.json.
+Reference pipeline: inspect → baseline → Model 1 word TF-IDF → errors → later-time/unseen-coin tests → Model 2 balanced → char-ngram trial → word-contribution demo → full results/limits. docs/scamcheck-pipeline-map.md records the exact mapping. No synthetic price labels or forced quotas.
+
+Actual held-out Model 2 accuracy: 36.75% later-time vs 51.18% coin-only; 43.83% unseen coins vs 55.84% coin-only. No demonstrated forecasting edge. Details and all alternatives: docs/crowd-report.json.
+
+Training and notebook execution were verified on the server, not an actual Colab runtime. These archive dates were previously examined; results are exploratory.
 
 This project is a prototype and is not financial advice.

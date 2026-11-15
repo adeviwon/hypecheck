@@ -1,0 +1,49 @@
+{
+  "status": "passed",
+  "execution": "Empty-directory server run; not actual Google Colab",
+  "code_cells_with_outputs": 15,
+  "python_tests": 96,
+  "rich_tables": 24,
+  "accuracy_charts": 1,
+  "clean_report_exact_match": true,
+  "new_text_neural_inference": "exercised actual pinned FinTwitBERT on new text",
+  "widget_csv_training_parity": "passed with exact probability match",
+  "error_analysis": "actual outcome, probability, word reasons and grouped failure patterns for both models",
+  "safe_model_heldout_parity": "all actual held-out rows and all four fitted models checked",
+  "tests": {
+    "later_time": {
+      "first_target_day": "2026-04-21",
+      "last_target_day": "2026-10-20",
+      "snapshots_per_coin": {
+        "DOGE": 76,
+        "PEPE": 45,
+        "FLOKI": 14,
+        "BONK": 13,
+        "SHIB": 7
+      }
+    },
+    "unseen_coin_market": {
+      "first_target_day": "2026-04-23",
+      "last_target_day": "2026-10-03",
+      "snapshots_per_coin": {
+        "PENGU": 35,
+        "TRUMP": 32,
+        "WIF": 12,
+        "MEME": 9,
+        "NEIRO": 4,
+        "PNUT": 3,
+        "BOME": 3,
+        "TURBO": 1
+      }
+    }
+  },
+  "source_hashes": {
+    "HypeCheck.ipynb": "6b95a8d74b6ff8236e8f03895481d96885c50187ab943db6eb690fd61589d640",
+    "sample_pipeline.py": "268751cd13f2c47017a96cfb24e5d26ddedd2318748596823bf4be880bdd9605",
+    "crowd_snapshot.py": "a32105c5fff454b15619a718a35997da441580866b0054e57e10861115cb134f",
+    "crowd_app.py": "9b0c527cd800ae3caee7275c0a63fb72c7284d3a3bacc40afdb680e6b40ce081",
+    "docs/crowd-report.json": "a5f92c7d016c09b8361085a6eea298a24fbbc5c5910e570137b6a718f6ff820a",
+    "artifacts/crowd-model.json": "511f2ac5477051048f152ea957f5bb25e4004ba17ab606e8fe43a44f9e2b283b",
+    "artifacts/crowd-predictions.csv": "7799ba2d017938d71721d2292332f5d9d69819bc86e8da385d3cde48f8e9a68b"
+  }
+}

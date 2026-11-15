@@ -1,30 +1,33 @@
-# HypeCheck — public-post market forecast
+# HypeCheck — test the crowd
 
-Paste a public tweet, choose its memecoin and get an estimated next-UTC-day direction. Optional earlier public posts supply recent context. No live X feed is connected.
+Supply a batch of public X posts about one memecoin. HypeCheck separates estimated sample sentiment, next-day direction and the evidence for trusting that prediction. No claim of all-X coverage or causal price impact.
 
-[Open the submission in Colab](https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb) · [Try the trained browser model](https://adeviwon.github.io/hypecheck/predict.html)
+[Current Colab](https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb) · [Exact ScamCheck pipeline mapping](docs/scamcheck-pipeline-map.md)
 
-## Actual training
-Raw wording → train-only character TF-IDF → trained logistic regression for direction. A separate ridge regression estimates whole-coin return, not a tweet-caused effect. The notebook visibly fits the models using actual market outcomes. This is not transformer fine-tuning.
+## What is actually trained
+Default word TF-IDF + logistic regression; then the same features with balanced class weights; then the exact character-ngram trial from the sample. Aggregate pinned FinTwitBERT sentiment and coin identity stay fixed between comparisons. The classifiers train on actual subsequent market outcomes, not model guesses. No transformer fine-tuning is claimed.
 
-## Honest held-out results
+## Honest results
 
-| Method | Coin-day-weighted accuracy |
-|---|---:|
-| tweet_only | 49.28% |
-| tweet_and_context | 45.02% |
-| coin_only | 50.68% |
-| always_up | 48.40% |
-| training_majority | 51.60% |
-| training_prevalence | 51.60% |
-| previous_completed_day | 48.86% |
+| Model | Later-time accuracy | Unseen-coin accuracy |
+|---|---:|---:|
+| Model 1 | 36.09% | 49.03% |
+| Model 2 | 36.75% | 43.83% |
+| Character trial | 40.03% | 45.13% |
+| Coin only | 51.18% | 55.84% |
+| Always up | 50.39% | 44.16% |
+| Training majority | 49.61% | 55.84% |
+| Training prevalence | 49.61% | 55.84% |
+| Previous completed day | 47.24% | 55.84% |
 
-Training: 1,451 post/coin events across 859 coin-days. Validation: 71 events across 55 coin-days. Test: 271 events across 219 coin-days and 112 shared dates. Reused archive: exploratory, not independent confirmation. Neither wording model beats the training-majority baseline. Return estimates do not beat the training-constant error baseline.
+All accuracy is coin-day weighted. Training: 991 snapshots / 556 coin-days. Later-time test: 155 snapshots / 127 coin-days. Unseen-coin test: 99 snapshots / 77 coin-days. The word-balanced model fails the coin-only control in both tests. No demonstrated forecasting edge.
 
 ## Use
-In Colab select Runtime → Run all, then edit Section 9. The static browser demo runs the same safe-JSON model locally, without uploading text. The target is the next complete UTC day, open to close, not the next 24 hours.
+Runtime → Run all. Section 5 visibly fits Model 1; Section 8 fits balanced Model 2 and the character trial. Section 9 runs a genuine historical batch and offers the optional multi-post/CSV app. New text runs the actual pinned pretrained sentiment network. Missing/invalid models or inputs block forecasting rather than fabricate scores.
+
+The primary target is the next complete UTC day after the snapshot cutoff, open to close, not the next 24 hours. Blank runtime cutoff means the actual submission time; old pasted text is not an automatic backtest.
 
 ## Sources and limits
-Public financial-tweets-crypto archive, actual Binance daily market bars, scikit-learn and dependencies; pinned revisions and hashes are in source. Hermes Agent/OpenAI assisted coding. No causal impact identification, no independently calibrated probabilities, no validated trading edge, no complete live sentiment feed. Older files are retrospective research, not an alternative current submission.
+[Public post archive](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto), [FinTwitBERT](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), actual Binance market bars, scikit-learn and dependencies; Veritas AI sample pipeline; Hermes Agent/OpenAI coding assistance. Sparse, biased archive and previously explored test dates mean exploratory evidence, not independent confirmation. No complete live feed, independently calibrated probabilities, causal effect or trading recommendation.
 
 **This project is a prototype and is not financial advice.**

@@ -1,0 +1,11 @@
+{
+  "revision": "690a60d1561a3cabff6e87445cfcb934d32451e2",
+  "files": {
+    "sample_pipeline.py": "268751cd13f2c47017a96cfb24e5d26ddedd2318748596823bf4be880bdd9605",
+    "crowd_snapshot.py": "a32105c5fff454b15619a718a35997da441580866b0054e57e10861115cb134f",
+    "crowd_app.py": "9b0c527cd800ae3caee7275c0a63fb72c7284d3a3bacc40afdb680e6b40ce081",
+    "test_sample_pipeline.py": "ac9c345ed02a4803d428119640b915b5ba410c3ddeb23a3dba398d570ee4cd4a",
+    "test_crowd_snapshot.py": "79cb9c9983d72e729bf069dc6d253125778d9e2e60ba774499c73ccf7caddb4d",
+    "test_crowd_app.py": "ccf94fbc82dff1cd9194eb945db78b8498e433cdb8f93696339a77ce6bb177f1"
+  }
+}
