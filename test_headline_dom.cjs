@@ -17,11 +17,11 @@ async function harness(fail=false){
 (async()=>{
  const e=await harness();assert.equal(e.error.textContent,'');
  assert.equal(e.metrics.children.length,7);assert.equal(e.cards.children.length,4);assert.equal(e.kinds.children.length,4);
- assert.equal(e.coin.children.length,5);assert.equal(e.day.children.length,193);
+ assert.equal(e.coin.children.length,report.protocol.coins.length);assert.equal(e.day.children.length,report.protocol.splits.test.dates);
  assert.equal(e.outcome.textContent,'Outcome hidden.');e.reveal.onclick();assert.match(e.outcome.textContent,/Actual:/);
  e.coin.value='DOGE';e.day.value='2026-10-21';e.day.onchange();assert.equal(e.outcome.textContent,'Outcome hidden.');
  e.reveal.onclick();const r=records.find(x=>x.coin==='DOGE'&&x.date.startsWith('2026-10-21'));
  assert.equal(e.outcome.textContent,'Actual: '+(r.actual_up?'up':'not up')+' · open-to-close return '+(100*r.actual_return).toFixed(2)+'%');
  const bad=await harness(true);assert.match(bad.error.textContent,/Could not load/);assert.equal(bad.reveal.disabled,true);
- console.log('Headline replay DOM passed: measured metrics, five coins, 193 dates, reveal/reset, failed-fetch handling.');
+ console.log('Headline replay DOM passed: measured metrics, expanded coin/date support, reveal/reset, failed-fetch handling.');
 })().catch(e=>{console.error(e);process.exit(1);});

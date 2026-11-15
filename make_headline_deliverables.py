@@ -7,7 +7,7 @@ r=json.loads((R/'docs/headline-report.json').read_text());m=r['metrics'];s=r['pr
 a=['# HypeCheck — Signal or Noise?','','**AI + Finance · Veritas AI International High School Hackathon 2026**','',
 '**Team:** Nathaniel Wong (model) · Aaden Yick (data) · Alastair Chu (demo and write-up) · Malvern College Hong Kong','',
 '*This project is a prototype and is not financial advice.*','','## The question','',
-'Do prior-day headline-style X posts tell us anything about the next UTC day’s direction for **DOGE, SHIB, PEPE, BONK and FLOKI**? These are original social posts, not newspaper headlines or a complete X feed.','',
+'Do prior-day headline-style X posts tell us anything about the next UTC day’s direction for **13 memecoins**? These are original social posts, not newspaper headlines or a complete X feed.','',
 '**Answer: not reliably in this experiment.** The sentiment-feature model beats always-up and previous-day direction on point accuracy, but not the training-majority rule. Adding sentiment to market history does not demonstrate an improvement. Failed models do not prove prediction impossible.','',
 '- **Colab:** https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb',
 '- **Demo:** https://adeviwon.github.io/hypecheck/headlines.html',
@@ -15,7 +15,7 @@ a=['# HypeCheck — Signal or Noise?','','**AI + Finance · Veritas AI Internati
 '- **Every forecast:** [`artifacts/headline-predictions.csv`](artifacts/headline-predictions.csv)','',
 '## User and product','',
 'A beginner crypto investor sees a bullish post and wonders whether to trust it. HypeCheck compares prior-information forecasts with simple rules and reveals what happened in a historical replay. It helps inspect claims, not place orders.','',
-'## Test-period results','',f"**{s['start']}–{s['end']}: {s['rows']} coin-days across {s['dates']} UTC dates.** All methods use identical test rows.",'',
+'## Expanded dataset','',f"The naturally sampled expanded corpus contains {r['coverage']['eligible_original_posts']:,} eligible original posts across {len(r['protocol']['coins'])} memecoins. Natural pretrained sentiment labels: {r['tweet_sentiment_counts']}. No 40-case or 15/25 quota. The same {s['dates']} dates remain dependent across coins; {s['rows']:,} coin-days are not that many independent tweets.",'', '## Test-period results','',f"**{s['start']}–{s['end']}: {s['rows']} coin-days across {s['dates']} UTC dates.** All methods use identical test rows.",'',
 '| Method | Accuracy | Brier error ↓ |','|---|---:|---:|']
 for name in ['Always up','Previous-day direction','Training majority','Sentiment + coin','Coin only','Market only','Market + sentiment','Training prevalence']:
  a.append(f"| {name} | {m[name]['accuracy']:.2%} | {m[name]['brier']:.4f} |")
@@ -26,6 +26,8 @@ a+=['',
 '| Sentiment model minus baseline | Difference | Exploratory 95% interval |','|---|---:|---|']
 for name in ['Always up','Previous-day direction','Training majority','Market only']:
  x=r['paired_accuracy_differences'][name];lo,hi=x['interval95'];a.append(f"| {name} | {100*x['mean']:+.2f} pp | [{100*lo:+.2f}, {100*hi:+.2f}] pp |")
+delta=r['paired_accuracy_differences']['sentiment_increment_brier'];lo,hi=delta['interval95']
+a += ['', f"Market + sentiment minus market-only Brier error: {delta['mean']:+.6f}, exploratory 95% interval [{lo:+.6f}, {hi:+.6f}]. Positive means worse probability error when sentiment is added."]
 a+=['','Intervals use paired seven-observed-date circular moving-block resamples, retaining coins together. Every interval above crosses zero.','',
 f"A secondary expanding-window model scores **{r['walk_forward']['pooled']['Sentiment + coin']['accuracy']:.2%}** over the same final dates. It is a robustness check, not independent replication. Per-window results are in the notebook and JSON.",'',
 '## Do some kinds of headline-style posts matter more?','',
@@ -69,8 +71,9 @@ d=pd.read_csv(R/'artifacts/headline-predictions.csv')
 subprocess.run([sys.executable,str(R/'build_headline_colab.py')],check=True)
 print('Generated focused README, replay data and notebook.')
 
-summary = ['# HypeCheck - Signal or Noise?', '', 'This project is a prototype and is not financial advice.', '', 'We test whether prior-day headline-style X posts add information about next-day open-to-close direction for DOGE, SHIB, PEPE, BONK and FLOKI.', '', '## Results', '']
+summary = ['# HypeCheck - Signal or Noise?', '', 'This project is a prototype and is not financial advice.', '', 'We test whether prior-day headline-style X posts add information about next-day open-to-close direction for 13 memecoins.', '', '## Results', '']
 for name in ['Always up', 'Previous-day direction', 'Sentiment + coin', 'Training majority', 'Market only', 'Market + sentiment']:
     summary.append(name + ': ' + format(m[name]['accuracy'], '.2%'))
 summary += ['', 'The sentiment model does not beat training majority; adding sentiment does not establish improvement beyond market history. No text kind demonstrated reliable improvement. Sparse archive coverage and exploratory reuse limit inference.', '', 'No trading, profit or causal claim is justified. This does not prove prediction is impossible.', '', 'Full method, paired intervals, sources and credits: README.md. Measured report: docs/headline-report.json. Colab: HypeCheck.ipynb.']
+summary += ['', 'Expanded corpus: '+str(r['coverage']['eligible_original_posts'])+' original posts; '+str(len(r['protocol']['coins']))+' memecoins; '+str(s['rows'])+' held-out coin-days. Natural sentiment distribution; no fixed 15/25 split.']
 (R/'WRITEUP.md').write_text(chr(10).join(summary)+chr(10))

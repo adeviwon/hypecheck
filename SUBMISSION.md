@@ -8,7 +8,9 @@
 
 **Problem:** A beginner investor sees bullish memecoin posts and wonders whether they forecast tomorrow. We test rather than assume that claim.
 
-**Approach:** Prior-day original X-post sentiment for DOGE, SHIB, PEPE, BONK and FLOKI. Frozen pretrained FinTwitBERT features plus logistic regression; chronological splits with purge gaps, both requested baselines, coin/market ablations and text-kind comparisons.
+**Approach:** Prior-day original X-post sentiment for 13 memecoins. Frozen pretrained FinTwitBERT features plus logistic regression; chronological splits with purge gaps, both requested baselines, coin/market ablations and text-kind comparisons.
+
+**Dataset:** 1,773 eligible original posts; 13 memecoins; 2,509 held-out coin-days across 193 UTC dates. Natural sentiment distribution, no quota split.
 
 **Results:** Read the generated README and `docs/headline-report.json`; those are the source of truth. Do not copy an old headline number from a different model or split. Beating weak baselines on point accuracy does not demonstrate useful sentiment information. The study is exploratory on a reused period, not independent confirmation.
 

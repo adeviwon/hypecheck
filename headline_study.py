@@ -1,7 +1,7 @@
 """Does prior-day X-post sentiment predict next-day memecoin direction?
 Frozen dates, prior-only features, and text-kind sensitivity; no causal claim.
 """
-import json,re
+import argparse,json,re
 import numpy as np
 import pandas as pd
 from sklearn.metrics import brier_score_loss
@@ -62,10 +62,14 @@ def choose(train,val,features):
  loss,c,m=min(candidates,key=lambda x:(x[0],x[1]))
  return m,{'C':c,'validation_brier':loss}
 def safe_metrics(y,p):return core.scores(y,p)
-def main():
- raw,posts=core.load_posts();posts=core.score_posts(posts)
- prices={c:core.load_prices(c) for c in core.COINS};hourly={c:core.load_hourly(c) for c in core.COINS};btc=core.load_btc()
- frame,_=core.build_dataset(posts,prices,hourly,btc)
+def main(universe='original'):
+ if universe=='expanded':
+  from expanded_inputs import load,COINS
+  raw,posts,prices,frame=load();core.COINS=COINS
+ else:
+  raw,posts=core.load_posts();posts=core.score_posts(posts)
+  prices={c:core.load_prices(c) for c in core.COINS};hourly={c:core.load_hourly(c) for c in core.COINS};btc=core.load_btc()
+  frame,_=core.build_dataset(posts,prices,hourly,btc)
  frame=frame.merge(aggregate_kinds(posts).reset_index(),on=['coin','date'],how='left',validate='one_to_one')
  kindcols=[k+s for k in KINDS for s in ('_count','_sentiment')];frame[kindcols]=frame[kindcols].fillna(0.)
  frame['previous_day']=np.nan
@@ -125,9 +129,9 @@ def main():
   win['metrics']['Previous-day direction']=safe_metrics(part.actual_up,part.previous_day.to_numpy());windows.append(win)
  walk={'note':'Secondary expanding-window re-estimation on the same final dates, not an independent replication.',
        'windows':windows,'pooled':{name:core.metric(name,test,p) for name,p in wf.items()}}
- cache=json.loads((core.ROOT/'data/sentiment.json').read_text())
+ cache=json.loads((core.ROOT/'data'/('expanded-sentiment.json' if universe=='expanded' else 'sentiment.json')).read_text())
  report={'question':'Do prior-day X-post headline-style texts add information about next-UTC-day memecoin direction?',
-  'primary_model':primary,'target':'close > open on target UTC day; flat counts as not up',
+  'universe':universe,'tweet_sentiment_counts':{str(k):int(v) for k,v in posts[['bullish','bearish','neutral']].idxmax(axis=1).value_counts().items()},'primary_model':primary,'target':'close > open on target UTC day; flat counts as not up',
   'source_description':'Original X posts, not newspaper headlines. Archive subset, not complete coverage of X.',
   'protocol':{'coins':list(core.COINS),'splits':{name:{'start':str(d.date.min().date()),'end':str(d.date.max().date()),'rows':len(d),'dates':d.date.nunique()} for name,d in [('train',train),('validation',val),('test',test)]},
      'C_candidates':[.01,.1,1.],'selection':'validation Brier only; threshold 0.5; no refit on validation for frozen model',
@@ -137,7 +141,7 @@ def main():
   'model_source':{'model':core.MODEL,'revision':core.MODEL_REV,'dataset':core.DATASET,'dataset_revision':core.DATASET_REV,'score_signature':cache['signature']},
   'leakage_checks':{'shared_train_test_dates':len(set(train.date)&set(test.date)),'train_target_end_before_validation':True,'validation_target_end_before_test':True,
      'prior_only_post_windows':bool((posts.available_at<posts.date).all()),'all_models_same_test_rows':True},
-  'coverage':{'eligible_original_posts':len(posts),'test_coin_days_with_posts':int((test.post_count>0).sum()),'test_coin_days_total':len(test)},
+  'coverage':{'market_bar_rows':sum(len(p) for p in prices.values()),'all_feature_coin_days':len(frame),'eligible_original_posts':len(posts),'test_coin_days_with_posts':int((test.post_count>0).sum()),'test_coin_days_total':len(test)},
   'selection':selection,'metrics':metrics,'paired_accuracy_differences':paired,'kinds':kinds,'taxonomy':PATTERNS,
   'controls':{'runs':20,'real_accuracy':metrics[primary]['accuracy'],'label_permuted_accuracy':null,'feature_placebo_accuracy':placebo,
        'label_permuted_max':max(null),'feature_placebo_max':max(placebo)},'walk_forward':walk,
@@ -164,4 +168,5 @@ def main():
  for r in kinds:print(r['kind'],'observed coin-days',r['test_coin_days_with_kind'],'delta',r['paired_brier_vs_market'],'Holm p',r['holm_adjusted_p'])
  print('WALK FORWARD',json.dumps(walk['pooled'],default=str))
  print('WROTE docs/headline-report.json, artifacts/headline-predictions.csv, artifacts/headline-model.json')
-if __name__=='__main__':main()
+if __name__=='__main__':
+ parser=argparse.ArgumentParser();parser.add_argument('--universe',choices=['original','expanded'],default='expanded');args=parser.parse_args();main(args.universe)
