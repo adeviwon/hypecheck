@@ -138,12 +138,51 @@
   "changed_source_sha256": {
     "prepare_verification.py": "c00bf737364d9549cd6f26f0fc95185ea09ba80da51398e9acab4b22e509690f",
     "verify_submission.py": "081e9d9bf3c3e168f6f0694c08863be9501e46fd47e77de4193d33a4a6828369",
-    "qa_playwright.py": "6b6b3c5053108e9350b762c7abca6f0c45878665eeac565a4e7196bc6a40e82f",
+    "qa_playwright.py": "db25791facbb76f0d28d96ffed7f1375b33f8f033b2acccd23532e0fa1966e5b",
     "docs/app.js": "444b7dd60a93bb360b1d7d829a635d00c621ae12f11d7ae7d91b99ea7da2e57b",
     "docs/headlines.css": "3d07df49c7b90e30cec122ccc79edaeeaab386480e62fc8ca42d90f633159f5a",
     "docs/headlines.html": "7bca8d9702c0c8fbe125da97be260f20a492c1963934d1a62c1370988e021791",
     "docs/index.html": "d1db5e5b4f555b92c59ae871f1ecae55cd023b0932538f39352ef78589cd958a",
     "docs/predict.html": "ce6de15541332322560cb72f2415d9418ca0cfe1b4d0099482ef7cc0c0857470",
     "docs/style.css": "e466db107ba4a882d03723afa7110172d925317d76a2e42e52949e5d212fc786"
+  },
+  "published_deployment": {
+    "application_commit": "fdd0e0fdf2d68a0e4f69fccd09d0f47a00b86e08",
+    "url": "https://adeviwon.github.io/hypecheck",
+    "status": "PASS",
+    "forecast_contexts": 9,
+    "repeat_cls": [
+      {
+        "page": "headlines.html",
+        "iteration": 1,
+        "CLS": 0.03538280725479126
+      },
+      {
+        "page": "headlines.html",
+        "iteration": 2,
+        "CLS": 0.03538280725479126
+      },
+      {
+        "page": "headlines.html",
+        "iteration": 3,
+        "CLS": 0.03538280725479126
+      },
+      {
+        "page": "index.html",
+        "iteration": 1,
+        "CLS": 0
+      },
+      {
+        "page": "index.html",
+        "iteration": 2,
+        "CLS": 0
+      },
+      {
+        "page": "index.html",
+        "iteration": 3,
+        "CLS": 0
+      }
+    ],
+    "keyboard_table_scroll_px": 40
   }
 }
