@@ -1,216 +1,302 @@
-"""Generate the expanded study in the organiser sample's narrative sequence."""
-import base64,hashlib,json,zlib
+"""Generate the judge-facing notebook: sample-style narrative, compact code, rich outputs."""
+import hashlib
+import json
 from pathlib import Path
-ROOT=Path(__file__).resolve().parent
-SOURCES={n:(ROOT/n).read_text() for n in ['pipeline.py','headline_study.py','expanded_inputs.py','test_headline_study.py','test_expanded_inputs.py']}
-inputs={}
-for name in ['expanded-memecoin-daily.csv','expanded-sentiment.json']:
- data=(ROOT/'data'/name).read_bytes()
- inputs['data/'+name]={'sha256':hashlib.sha256(data).hexdigest(),'zlib_base64':base64.b64encode(zlib.compress(data)).decode()}
-cells=[]
-def md(s):cells.append({'cell_type':'markdown','metadata':{},'source':s.strip().splitlines(keepends=True)})
-def code(s):cells.append({'cell_type':'code','execution_count':None,'outputs':[],'metadata':{},'source':s.strip().splitlines(keepends=True)})
-md("""# HypeCheck: do headline-style posts predict memecoin direction?
+
+ROOT = Path(__file__).resolve().parent
+BOOTSTRAP_REVISION = '2ce94ac955100ec37968fdfa404e3ae7af8e430b'
+BOOTSTRAP_HASHES = {
+    'colab_setup.py': '48e912fec0f69329b2ed93ef5da6cca4890ec191fa6e84367eece7be2a246cb4',
+    'notebook_support.py': 'e5dd57e29724851b18e5bd2ebfb9b226b4bb5a72be36b4144a51503ab2e01e70',
+}
+SOURCE_FILES = ['pipeline.py', 'headline_study.py', 'expanded_inputs.py',
+                'test_headline_study.py', 'test_expanded_inputs.py']
+cells = []
+
+
+def md(text):
+    cells.append({'cell_type': 'markdown', 'metadata': {}, 'source': text.strip().splitlines(keepends=True)})
+
+
+def code(text, title=None):
+    metadata = {'cellView': 'form'} if title else {}
+    if title:
+        text = '#@title ' + title + '\n' + text
+    cells.append({'cell_type': 'code', 'execution_count': None, 'outputs': [],
+                  'metadata': metadata, 'source': text.strip().splitlines(keepends=True)})
+
+
+md("""# HypeCheck: signal or noise?
+### Can yesterday's social posts predict tomorrow's memecoin direction?
 **Veritas AI International High School Hackathon 2026 · AI + Finance**
+**Team:** Nathaniel Wong · Aaden Yick · Alastair Chu — Malvern College Hong Kong
 
-**Team:** Nathaniel Wong (model), Aaden Yick (data), Alastair Chu (demo and write-up) · Malvern College Hong Kong.
+**Our user:** a beginner crypto investor who sees a bullish post and wonders whether to trust it.
+**Our test:** compare an AI sentiment model with simple rules on later, unseen-by-training market dates.
 
-**Pitch:** HypeCheck helps a beginner crypto investor test whether bullish social posts deserve forecasting trust, by comparing sentiment-based next-day forecasts against simple rules and actual market outcomes.
+> **Bottom line:** we do not demonstrate reliable additional forecasting value from these posts. A negative result is still a useful answer.
 
-**How to run:** Runtime → Run all. No keys, uploads or live Binance API calls. The default uses verified cached outputs from a pinned pretrained sentiment model and trains direction classifiers afresh. A recompute switch reruns frozen sentiment inference. The encoder is not fine-tuned.
+**How to run:** choose **Runtime → Run all**. No keys or uploads. Saved outputs are included for reading without running. We train the direction classifiers during the run; the default reuses verified, frozen sentiment scores.
 
-This expands the original study to **13 memecoins**. There is no 40-tweet test and no 15/25 sentiment quota: all eligible naturally occurring posts are retained. X posts are our headline-style source, not newspaper headlines or a complete X feed.
+**Reading route:** data → time split → baselines → model → mistakes → robustness → demo → conclusion. Each section explains **what we do** and **what the output means**, like the sample submission.
 
-The section sequence follows the sample: load → inspect → split → baseline → first model → mistakes → later-data test → measured improvement → demo → results → limitations and sources. New experiment, same archive: this is exploratory, not independent confirmation.
-
-*This project is a prototype and is not financial advice.*
+*Prototype only. Not financial advice. These are X posts, not newspaper headlines. The reused archive makes this exploratory, not independent confirmation.*
 """)
-code("""import sys,subprocess,os,json,hashlib,urllib.request,base64,zlib
+md("""### Before you start: automatic setup
+Run this once. Installation details are kept out of the main explanation. In Colab, click **Show code** on a setup cell if you want to inspect it.
+""")
+code("""import sys, subprocess, json, hashlib, urllib.request
 from pathlib import Path
-IN_COLAB='google.colab' in sys.modules
-if IN_COLAB:
-    pins=['numpy==2.5.4','pandas==3.1.1','pyarrow==26.0.1','scikit-learn==1.9.1','requests==2.34.2','transformers==5.23.0','safetensors==0.8.0']
-    subprocess.run([sys.executable,'-m','pip','install','-q',*pins],check=True)
-for name in ['data','docs','artifacts']:Path(name).mkdir(exist_ok=True)
-print('Runtime:',sys.version,'Colab:',IN_COLAB)
-print('The default direction classifiers are trained during this run.')
-""")
+if 'google.colab' in sys.modules:
+    pins = ['numpy==2.5.4', 'pandas==3.1.1', 'pyarrow==26.0.1',
+            'scikit-learn==1.9.1', 'requests==2.34.2',
+            'transformers==5.23.0', 'safetensors==0.8.0']
+    subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', *pins], check=True)
+print('Environment ready. Direction models will be trained in this run.')
+""", 'Prepare the Python environment')
 md("""## 1. Load the data
-The original posts are downloaded from a fixed Hugging Face revision and SHA-256 checked. The daily market panel contains actual Binance spot OHLCV bars for DOGE, SHIB, PEPE, BONK, FLOKI, WIF, TRUMP, NEIRO, PENGU, PNUT, TURBO, BOME and MEME, ending before the fixed evaluation horizon.
+We combine **original X posts** with **daily Binance prices for 13 memecoins**. No posts are selected to meet a bullish/bearish quota.
 
-For reliable Colab access, the notebook embeds compressed, hash-checked copies of the exact price panel and frozen pretrained sentiment cache. These are data, not cached forecasts. We cite Binance's market-data terms, which remain separate from our code licence. Our exact source code is embedded too; no moving-branch dependency or credentials.
+The short loader downloads exact, **commit-pinned and SHA-256-checked** files. It does not download precomputed forecasts. The full method remains inspectable in the [source code](https://github.com/adeviwon/hypecheck/blob/e396d50d1ac40eabd648f1cedc4d9316e80e7759/headline_study.py).
+
+**What to look for:** a verification message, followed by a small sample of real posts in Section 2.
 """)
-source="SOURCES = "+repr(SOURCES)+chr(10)
-source+="""for name,text in SOURCES.items():
-    Path(name).write_text(text)
-    print('Wrote',name)
-"""
-code(source)
-load="EMBEDDED_INPUTS = "+repr(inputs)+chr(10)
-load+="""for name,item in EMBEDDED_INPUTS.items():
-    payload=zlib.decompress(base64.b64decode(item['zlib_base64']))
-    if hashlib.sha256(payload).hexdigest()!=item['sha256']:raise ValueError('Embedded input was changed: '+name)
+bootstrap = f"REVISION = {BOOTSTRAP_REVISION!r}\nVERIFIED_FILES = {BOOTSTRAP_HASHES!r}\n"
+bootstrap += """for name, expected in VERIFIED_FILES.items():
+    url = f'https://raw.githubusercontent.com/adeviwon/hypecheck/{REVISION}/{name}'
+    with urllib.request.urlopen(url, timeout=120) as response:
+        payload = response.read()
+    if hashlib.sha256(payload).hexdigest() != expected:
+        raise ValueError('Setup verification failed: ' + name)
     Path(name).write_bytes(payload)
-    print('Verified',name,len(payload),'bytes')
-import pipeline as core
-from expanded_inputs import select_posts,load,split_data,COINS
-RECOMPUTE_SENTIMENT=False
-if RECOMPUTE_SENTIMENT:
-    Path('data/expanded-sentiment.json').unlink(missing_ok=True)
-    Path('.cache/expanded-headlines/data/sentiment.json').unlink(missing_ok=True)
-raw,_=core.load_posts()  # pinned public source download + SHA verification
-print('Verified original source rows:',len(raw))
+from colab_setup import prepare
+prepare()
+from notebook_support import table, accuracy_table, accuracy_chart, replay
 """
-code(load)
+code(bootstrap, 'Download and verify the study files')
+code("""import numpy as np
+import pandas as pd
+from IPython.display import Markdown, display
+import pipeline as core
+from expanded_inputs import select_posts, load, split_data, COINS
+raw, _ = core.load_posts()
+selected = select_posts(raw)
+print(f'Loaded {len(raw):,} source rows; {len(selected):,} eligible original posts.')
+print('Coins:', ', '.join(COINS))
+""")
 md("""## 2. Look at the data before training
-Keep original posts, bounded nonempty text, exact supported ticker tags and earliest exact-text duplicates. The later of publication and archive collection time is conservative availability. A post from day d feeds only the forecast for day d+1.
+We remove duplicates and keep supported coin tags. A post is usable only after the later of its publication and archive-collection timestamps.
 
-Sentiment classes are outputs of the pretrained model, not human labels. Bullish does not mean the coin actually rose. Multi-coin posts can contribute to multiple coin-days; tweet count, market-bar count and prediction-row count are different units.
-""")
-code("""from expanded_inputs import inspect_posts
-selected=inspect_posts(raw)
-import pandas as pd,numpy as np
-""")
-md("""## 3. Split into training, validation and later-date test data
-**Never split these financial rows randomly.** Use shared chronological boundaries, approximately 60/20/20 across UTC dates, and purge the adjacent day at each boundary. Earlier target windows must end before the next partition begins.
+**Prediction task:** use posts available on one UTC day to predict whether the coin's **next-day close is above its open**. A flat day counts as “not up.”
 
-The label is next-UTC-day **close > open**; flat counts as not up. Only strictly prior-day sentiment and lagged market features can be predictors. Scaling and coefficients are fitted on training rows; regularisation is selected by validation Brier error. The expanded universe and period were not a pristine new preregistration; we disclose archive reuse.
+**Read the sample below:** these are actual inputs, not invented examples. Sentiment is an AI label for the wording—not proof that the price rose.
 """)
-code("""raw,scored,prices,frame=load()
-print('Natural sentiment counts:',scored[['bullish','bearish','neutral']].idxmax(axis=1).value_counts().to_dict())
-train,validation,test=split_data(frame)
-print(pd.DataFrame([{'partition':name,'first':str(x.date.min().date()),'last':str(x.date.max().date()),'coin_days':len(x),'UTC_dates':x.date.nunique()} for name,x in [('train',train),('validation',validation),('test',test)]]).to_string(index=False))
-assert train.date.max()+pd.Timedelta(days=1)<validation.date.min()
-assert validation.date.max()+pd.Timedelta(days=1)<test.date.min()
-assert not set(train.date)&set(test.date)
-print('Boundary and shared-date leakage checks passed.')
+code("""sample = selected[['available_at', 'text']].head(3).copy()
+sample['available_at'] = sample.available_at.dt.strftime('%Y-%m-%d %H:%M UTC')
+sample.columns = ['Available from', 'Example post']
+table(sample, 'Three real posts before any direction model is trained')
+print('One observation in the evaluation = one coin on one UTC day, not one tweet.')
 """)
-md("""## 4. Baselines: always up and previous-day direction
-Always up ignores all text. Persistence copies the previous calendar UTC day's **open-to-close** direction, matching the target—not previous close-to-close return. We also report training majority and a training-prevalence probability baseline so a falling market cannot masquerade as text skill.
+md("""## 3. Split the data by time—not at random
+| Partition | Purpose |
+|---|---|
+| Training: earliest dates | Learn the classifier and preprocessing |
+| Validation: middle dates | Choose regularisation without using the test |
+| Test: latest dates | Report the final accuracy |
+
+We leave a **one-day gap** at each boundary. Features use only earlier information; training and test share **zero UTC dates**. The archive has been examined in earlier research, so this is not a pristine confirmatory test.
+
+**What the output means:** the test dates must come after training and validation. The assertions stop execution if the boundaries overlap.
+""")
+code("""raw, scored, prices, frame = load()
+train, validation, test = split_data(frame)
+table(pd.DataFrame([{
+    'Partition': name, 'First day': str(part.date.min().date()),
+    'Last day': str(part.date.max().date()), 'Coin-days': len(part),
+    'UTC dates': part.date.nunique(),
+} for name, part in [('Train', train), ('Validation', validation), ('Test', test)]]))
+assert train.date.max() + pd.Timedelta(days=1) < validation.date.min()
+assert validation.date.max() + pd.Timedelta(days=1) < test.date.min()
+assert not set(train.date) & set(test.date)
+print('PASS: chronological partitions, purge gaps and no shared train/test dates.')
+""")
+md("""## 4. Baselines: can we beat simple guesses?
+Before using AI, test rules that read **no text**:
+
+1. **Always up:** predict that every coin rises.
+2. **Previous-day direction:** copy yesterday's open-to-close direction.
+3. **Training majority:** always predict the more common training direction.
+
+**Accuracy** is the percentage of correct directions. **Brier error** measures probability error; lower is better. For that score, training prevalence is the fair constant-probability reference—not a hard 0/1 guess.
 """)
 code("""from headline_study import previous_day
-persistence=np.full(len(test),np.nan)
+persistence = np.full(len(test), np.nan)
 for coin in COINS:
-    mask=test.coin.eq(coin).to_numpy()
-    persistence[mask]=test.loc[mask,'date'].map(previous_day(prices[coin])).to_numpy()
+    mask = test.coin.eq(coin).to_numpy()
+    persistence[mask] = test.loc[mask, 'date'].map(previous_day(prices[coin]))
 assert np.isfinite(persistence).all()
-y=test.actual_up.to_numpy()
-baselines={'Always up':np.ones(len(test)),'Previous-day direction':persistence,'Training majority':np.full(len(test),float(train.actual_up.mean()>=.5)),'Training prevalence':np.full(len(test),train.actual_up.mean())}
-print(pd.DataFrame([{'method':name,**core.scores(y,p)} for name,p in baselines.items()]).to_string(index=False))
+y = test.actual_up.to_numpy()
+baselines = {'Always up': np.ones(len(test)), 'Previous-day direction': persistence,
+             'Training majority': np.full(len(test), float(train.actual_up.mean() >= .5)),
+             'Training prevalence': np.full(len(test), train.actual_up.mean())}
+table(pd.DataFrame([{'Rule': name, 'Accuracy': f"{core.scores(y, p)['accuracy']:.2%}",
+                    'Brier error': f"{core.scores(y, p)['brier']:.4f}"}
+                   for name, p in baselines.items()]))
 """)
-md("""## 5. Model 1: pretrained sentiment + logistic regression
-The primary model uses daily count/presence, mean bullish-minus-bearish sentiment, disagreement, bullish/bearish probabilities and coin identity. Frozen **FinTwitBERT** scores text; **logistic regression** learns the market-direction target. The encoder is not fine-tuned.
+md("""## 5. Model 1: turn sentiment into a direction forecast
+**Post → frozen FinTwitBERT sentiment → daily features → trained logistic regression → up / not up.**
 
-Fit C candidates 0.01, 0.1 and 1.0 on training only, choose using validation Brier, threshold at 0.5. Compare with coin-only to test whether sentiment adds anything beyond asset identity. All methods use the same later-date rows.
+The classifier sees sentiment, post count, disagreement and coin identity. The pretrained encoder is **not fine-tuned**. We fit three regularisation settings on training data and choose using validation Brier error. The probability threshold is fixed at 0.5.
+
+**Fair test:** compare the model with *coin identity only*, and compare market history *with versus without* sentiment. This separates text information from other easy explanations.
 """)
-code("""done=subprocess.run([sys.executable,'headline_study.py','--universe','expanded'],text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-print(done.stdout)
+code("""done = subprocess.run([sys.executable, 'headline_study.py', '--universe', 'expanded'],
+                      text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+Path('artifacts/training-log.txt').write_text(done.stdout)
+if done.returncode:
+    print(done.stdout)  # Show the diagnostic if training fails.
 done.check_returncode()
-report=json.loads(Path('docs/headline-report.json').read_text())
-pred=pd.read_csv('artifacts/headline-predictions.csv')
-print('CHECKS:',report['leakage_checks'])
+report = json.loads(Path('docs/headline-report.json').read_text())
+pred = pd.read_csv('artifacts/headline-predictions.csv')
+accuracy_table(report, ['Sentiment + coin', 'Coin only', 'Market only', 'Market + sentiment'])
+print('Fitted models, selected settings on validation, and saved every test prediction.')
 """)
 md("""## 6. Where Model 1 goes wrong
-Show the most confident wrong forecasts, not only successes. A probability is not a guarantee; a mistaken market forecast is not evidence the underlying author was fraudulent. These examples are deliberately selected for error analysis, not used to adjust the trained model.
-""")
-code("""wrong=pred[(pred['Sentiment + coin']>=.5)!=pred.actual_up].copy()
-wrong['confidence']=(wrong['Sentiment + coin']-.5).abs()
-print(wrong.nlargest(5,'confidence')[['date','coin','actual_up','Sentiment + coin','post_count','actual_return']].to_string(index=False))
-for row in wrong.nlargest(3,'confidence').to_dict('records'):
-    day=pd.Timestamp(row['date'])
-    relevant=scored[(scored.date==day)&scored.tickers.apply(lambda a:row['coin'] in a)]
-    print('INPUT CONTEXT',row['coin'],str(day.date()),relevant.text.head(2).tolist())
-""")
-md("""## 7. Our addition: the larger later-date evaluation
-No hand-selected 40 cases, no 15/25 sentiment quota. Evaluate the **entire natural test panel** and show results by coin, plus four expanding-date windows. Assets on the same date are dependent; the number of dates is not multiplied by the number of coins to claim independent evidence.
+A useful submission shows failures, not just successes. Below are the **three most confident wrong calls with observed posts**. We show their real prior-day inputs and actual outcomes.
 
-This is a larger version of the same archive, not an independent external dataset. Sparse text coverage remains a limitation. Missing archive posts do not prove the coin was not discussed.
+These examples are selected for explanation only. We do **not** tune the model after looking at them. A wrong forecast does not prove the author was fraudulent.
 """)
-code("""print('TEST PANEL:',report['protocol']['splits']['test'])
-print('TEXT COVERAGE:',report['coverage'])
-print('NATURAL SENTIMENT COUNTS:',report['tweet_sentiment_counts'])
-print(pd.DataFrame([{'coin':coin,**values} for coin,values in report['metrics']['Sentiment + coin']['per_coin'].items()]).to_string(index=False))
-for window in report['walk_forward']['windows']:
-    print(window['start'],window['end'],'n=',window['n'],{name:row['accuracy'] for name,row in window['metrics'].items()})
-print('Expanding-window checks reuse these final dates; not independent replications.')
+code("""wrong = pred[(pred['Sentiment + coin'] >= .5) != pred.actual_up].copy()
+wrong['confidence'] = (wrong['Sentiment + coin'] - .5).abs()
+examples = []
+for row in wrong[wrong.post_count > 0].nlargest(3, 'confidence').to_dict('records'):
+    day = pd.Timestamp(row['date'])
+    posts = scored[(scored.date == day) & scored.tickers.apply(lambda tags: row['coin'] in tags)]
+    examples.append({'Date': str(day.date()), 'Coin': row['coin'],
+                     'P(up)': f"{row['Sentiment + coin']:.1%}",
+                     'Actual': 'up' if row['actual_up'] else 'not up',
+                     'Return': f"{row['actual_return']:+.2%}",
+                     'Example prior-day post': posts.text.iloc[0] if len(posts) else 'No matched post'})
+table(pd.DataFrame(examples), 'Confident mistakes—not a random sample of forecasts')
 """)
-md("""## 8. One measured improvement: market context and kinds of posts
-Compare sentiment alone, market history alone, and the combination. Then ask whether **events, promotion, technical/price action, or other** posts contribute differently.
+md("""## 7. Our addition: test the full later-date panel
+We use **all eligible test rows across 13 coins**, not hand-picked tweets. Check coverage and four expanding-window evaluations below.
 
-Keyword buckets are exclusive per post in that priority order, approximate and not human-validated. Coin-day slices can overlap. Each kind's count and sentiment are added to market history, evaluated on all test rows. Report support, paired date-block intervals and Holm-adjusted block-sign tests. Negative Brier change favours adding the kind. A high score from a tiny slice is not a strategy.
+**Important:** coins on the same date are related. Thousands of coin-days are not thousands of independent days. Missing archive posts do not mean there was no discussion on X. The windows reuse the final period; they are robustness checks, not independent replications.
 """)
-code("""from headline_study import PATTERNS
-print('Fixed keyword rules:',json.dumps(PATTERNS,indent=2))
-rows=[]
+code("""period, coverage = report['protocol']['splits']['test'], report['coverage']
+print(f"Test: {period['start']} to {period['end']} · {period['rows']:,} coin-days · {period['dates']} UTC dates")
+print(f"Observed posts on {coverage['test_coin_days_with_posts']:,} / {coverage['test_coin_days_total']:,} test coin-days.")
+table(pd.DataFrame([{'Coin': coin, 'Model accuracy': f"{values['accuracy']:.2%}",
+                    'Test coin-days': values['n']}
+                   for coin, values in report['metrics']['Sentiment + coin']['per_coin'].items()]))
+table(pd.DataFrame([{'First day': window['start'], 'Last day': window['end'],
+                    **{name: f"{value['accuracy']:.2%}" for name, value in window['metrics'].items()}}
+                   for window in report['walk_forward']['windows']]), 'Expanding-window checks')
+""")
+md("""## 8. Do some kinds of posts matter more?
+We test four fixed keyword buckets: **events**, **promotion**, **technical**, and **other**. Each kind's count and mean sentiment are added to the market-only model, then evaluated on **all** test rows.
+
+**How to read the table:** negative Brier change favours that kind. An interval crossing zero is inconclusive. “Adjusted p” corrects for testing several kinds. These are approximate keyword labels; coin-day slices overlap and small samples cannot support a trading rule.
+""")
+code("""kind_rows = []
 for item in report['kinds']:
-    ci=item['paired_brier_vs_market']
-    rows.append({'kind':item['kind'],'coin_days_with_kind':item['test_coin_days_with_kind'],'post_coin_incidences':item['test_posts'],'Brier_change':ci['mean'],'CI_low':ci['interval95'][0],'CI_high':ci['interval95'][1],'Holm_p':item['holm_adjusted_p']})
-print(pd.DataFrame(rows).to_string(index=False))
-print('Market + sentiment vs market-only paired Brier:',report['paired_accuracy_differences']['sentiment_increment_brier'])
+    result = item['paired_brier_vs_market']
+    low, high = result['interval95']
+    kind_rows.append({'Kind': item['kind'], 'Coin-days with kind': item['test_coin_days_with_kind'],
+                      'Post-coin incidences': item['test_posts'], 'Brier change': f"{result['mean']:+.5f}",
+                      '95% interval': f'[{low:+.5f}, {high:+.5f}]',
+                      'Adjusted p': f"{item['holm_adjusted_p']:.3f}"})
+table(pd.DataFrame(kind_rows))
+reliable = [item['kind'] for item in report['kinds']
+            if item['paired_brier_vs_market']['interval95'][1] < 0 and item['holm_adjusted_p'] < .05]
+print('Finding:', ', '.join(reliable) + ' show exploratory improvement.' if reliable
+      else 'No kind demonstrates a reliable improvement under these checks.')
 """)
-md("""## 9. The demo: inspect a historical forecast and reveal the market result
-This uses the saved logistic model parameters, reconstructed from safe JSON—not a fabricated score. It is a historical forecast from prior information, not a live trade signal or a predictor of an individual tweet's causal effect. Change coin/date to another held-out row. Sentiment probabilities are not independently calibrated return probabilities.
-""")
-code("""saved=json.loads(Path('artifacts/headline-model.json').read_text())
-def predict_saved(row):
-    numeric=(row[saved['features']].to_numpy(dtype=float)-np.array(saved['numeric_mean']))/np.array(saved['numeric_scale'])
-    categories=np.array([float(row['coin']==name.removeprefix('coin__coin_')) for name in saved['feature_names'][len(numeric):]])
-    logit=float(np.r_[numeric,categories]@np.array(saved['coefficient'])[0]+saved['intercept'][0])
-    return float(1/(1+np.exp(-logit)))
-def replay(coin,date,reveal=False):
-    day=pd.Timestamp(date,tz='UTC')
-    row=test[(test.coin==coin)&(test.date==day)]
-    if len(row)!=1:raise ValueError('Choose a supported coin and held-out UTC date.')
-    row=row.iloc[0];prob=predict_saved(row)
-    checked=pred[(pred.coin==coin)&(pd.to_datetime(pred.date,utc=True)==day)].iloc[0]
-    assert np.isclose(prob,checked['Sentiment + coin'],atol=1e-12)
-    context=scored[(scored.date==day)&scored.tickers.apply(lambda a:coin in a)]
-    print(coin,date,'P(up), uncalibrated:',round(prob,4),'direction:','up' if prob>=.5 else 'not up')
-    print('Eligible context:',context.text.head(3).tolist() or 'No eligible archive posts; not proof of silence.')
-    if reveal:print('ACTUAL:',bool(row.actual_up),'return:',float(row.actual_return))
-    else:print('Outcome hidden. Set reveal=True to inspect the real market result.')
-first=pred[pred.post_count>0].sort_values(['date','coin']).iloc[0]
-replay(first['coin'],str(first['date'])[:10],reveal=True)
-print('Saved-model reconstruction verified against recorded prediction.')
-""")
-md("""## 10. Results summary — model and baselines together
-Use the full test-period comparison, not the most flattering coin, sentiment class or confidence band. Paired uncertainty groups coins by date. Both training-label permutation and feature-placebo controls actually refit the classifier; their accuracy nulls need not equal 50% under class imbalance.
-""")
-code("""order=['Always up','Previous-day direction','Training majority','Training prevalence','Sentiment + coin','Coin only','Market only','Market + sentiment']
-print(pd.DataFrame([{'method':name,**{k:v for k,v in report['metrics'][name].items() if k in ['accuracy','balanced_accuracy','brier','n','n_dates']}} for name in order]).to_string(index=False))
-print('Paired model-minus-baseline accuracy differences:',json.dumps(report['paired_accuracy_differences'],indent=2))
-print('Controls:',report['controls'])
-ci=report['paired_accuracy_differences']['Market only']['interval95']
-print('Interpretation:', 'positive exploratory accuracy difference; needs future confirmation' if ci[0]>0 else ('model underperforms market-only here' if ci[1]<0 else 'no clear accuracy improvement over market-only demonstrated'))
-""")
-md("""## 11. What this would and would not justify an investor doing
-**Justified:** question claims that bullish posts reliably predict tomorrow; compare them with simple rules, uncertainty and actual outcomes.
+md("""## 9. The demo: inspect a real historical forecast
+Choose a held-out coin/date and rerun the cell. First leave **reveal = False**; then change it to **True** to see what happened.
 
-**Not justified:** buying, selling, leverage, shorting, profit expectations, or saying posts caused returns. This result also does not prove all prediction impossible. No fees, slippage, execution or user-outcome study was performed.
+The probability is reconstructed from the **saved trained classifier** and verified against its recorded prediction. This is a historical replay—not a live trading signal or a measurement of a post's causal effect.
+""")
+code("""coin = 'PEPE'  #@param {type:'string'}
+date = '2026-04-21'  #@param {type:'string'}
+reveal = False  #@param {type:'boolean'}
+replay(test, scored, pred, coin, date, reveal=reveal)
+""", 'Try a historical forecast')
+md("""## 10. Results summary: does the text help?
+Start with the model and the two required baselines. Then check the harder references: training majority and market history.
 
-The archive is sparse and selected, not a random sample of all X. Symbol collisions and retrospectively assigned ticker metadata may misattribute a post; this is not contract-address-verified pump.fun coverage. Current exchange listings create selection/survivorship limits. Later-listed coins have shorter training histories. Pretraining overlap, text edits and collection timing are not fully auditable. English sentiment truncates at 128 tokens. The period has been repeatedly explored; wider coverage is not independent confirmation.
+**Do not mistake a higher point score for a proven edge.** The paired 95% intervals below resample seven-date blocks and keep coins together. If an interval includes zero, an accuracy improvement is not demonstrated.
+""")
+code("""names = ['Always up', 'Previous-day direction', 'Sentiment + coin', 'Training majority', 'Market only']
+accuracy_chart(report, names)
+accuracy_table(report, names + ['Coin only', 'Market + sentiment', 'Training prevalence'])
+comparisons = []
+for name in ['Always up', 'Previous-day direction', 'Training majority', 'Market only']:
+    result = report['paired_accuracy_differences'][name]
+    low, high = result['interval95']
+    comparisons.append({'Our model minus': name, 'Accuracy difference': f"{100 * result['mean']:+.2f} pp",
+                        'Paired 95% interval': f'[{100 * low:+.2f}, {100 * high:+.2f}] pp'})
+table(pd.DataFrame(comparisons), 'pp = percentage points; these are exploratory intervals')
+controls = report['controls']
+print(f"Sanity checks: real model {controls['real_accuracy']:.2%}; permuted-label maximum {controls['label_permuted_max']:.2%}; feature-placebo maximum {controls['feature_placebo_max']:.2%}.")
+print('The controls refit classifiers; their accuracy need not equal 50% in an imbalanced market.')
+""")
+md("""### What these results mean
+- Beating always-up is not enough: an always-down/majority rule can do well in a falling market.
+- The sentiment model does not demonstrate an accuracy gain over market history or training majority. The text-plus-market model is also checked directly against market-only.
+- This is a bounded result for **these inputs, models, horizon and dates**—not proof that every kind of financial-text prediction is impossible.
+
+## 11. What should an investor do with this?
+| This supports… | This does **not** support… |
+|---|---|
+| Questioning claims that bullish posts reliably predict tomorrow | Buying, selling, shorting or using leverage from these forecasts |
+| Demanding simple baselines, uncertainty and later-date tests | Expecting profits or claiming posts caused a price change |
+| Collecting better data and doing a genuinely new future test | Declaring all text-based prediction impossible |
+
+**Limitations:** sparse and selected X coverage; approximate coin tags and keyword labels; shorter histories for later-listed coins; listing/survivorship bias; uncertain pretraining overlap and text-edit history; English text truncated to 128 tokens; repeated exploration of this archive. No fees, slippage, execution or profitability study was performed.
 
 *This project is a prototype and is not financial advice.*
 """)
-md('## 12. Protocol tests and reproducibility')
-code("""for filename in ['test_headline_study.py','test_expanded_inputs.py']:
-    checked=subprocess.run([sys.executable,filename],text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-    print(checked.stdout);checked.check_returncode()
-print('Protocol tests passed. Runtime evidence above distinguishes actual Colab from server execution.')
+md("""## 12. Protocol tests and reproducibility
+The checks cover headline-kind rules, yesterday's matching direction, timestamp handling, price continuity and time splits. A failure stops execution. Full training output is saved in `artifacts/training-log.txt`, rather than filling the notebook with diagnostic JSON.
 """)
-md("""## Sources and credits
-- Public original posts: https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto ; dataset revision and SHA are in pipeline.py. Third-party post terms remain their own.
-- Frozen sentiment: https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment ; pinned revision in pipeline.py, original work by Stephan Akkerman and Tim Koornstra.
-- Actual Binance spot daily OHLCV bars, exact verified panel embedded above. Field definitions: https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#klinecandlestick-data . Market data is not relicensed as our code.
-- Original source and older independent hourly/BTC research remain credited in the repository; expanded primary models use daily bars, not invented hourly inputs.
-- PyTorch, Transformers, scikit-learn, pandas, NumPy, PyArrow, Requests and dependencies.
-- Hermes Agent / OpenAI coding assistance for research, implementation, review and testing. The team must understand and explain every part.
-- Veritas AI official sample structure and Finance brief §4.2.4. We changed market/source and added time-aware evaluation, broader memecoins, text-kind checks, controls and a historical replay.
+code("""for filename in ['test_headline_study.py', 'test_expanded_inputs.py']:
+    checked = subprocess.run([sys.executable, filename], text=True,
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if checked.returncode:
+        print(checked.stdout)
+    checked.check_returncode()
+    print('PASS:', filename)
+print('Execution environment:', 'Google Colab' if 'google.colab' in sys.modules else 'local Jupyter kernel (not a Colab execution claim)')
 """)
-nb={'nbformat':4,'nbformat_minor':5,'metadata':{'kernelspec':{'display_name':'Python 3','language':'python','name':'python3'},'language_info':{'name':'python'},'hypecheck':{'universe':'expanded','expected_code_cells':sum(c['cell_type']=='code' for c in cells),'quota_sampling':False}},'cells':cells}
-path=ROOT/'HypeCheck.ipynb'
+md("""## Sources, method and credits
+- **Posts:** [financial-tweets-crypto](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto), Stephan Akkerman; exact revision and SHA-256 in the [pipeline](https://github.com/adeviwon/hypecheck/blob/e396d50d1ac40eabd648f1cedc4d9316e80e7759/pipeline.py).
+- **Sentiment:** [FinTwitBERT-sentiment](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), Stephan Akkerman and Tim Koornstra; frozen, pinned checkpoint. Scores are not human-labelled sentiment truth.
+- **Prices:** actual [Binance spot daily OHLCV bars](https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#klinecandlestick-data); original provider terms remain separate from our code licence.
+- **Exact experiment:** [classifier and evaluation](https://github.com/adeviwon/hypecheck/blob/e396d50d1ac40eabd648f1cedc4d9316e80e7759/headline_study.py), [expanded inputs](https://github.com/adeviwon/hypecheck/blob/e396d50d1ac40eabd648f1cedc4d9316e80e7759/expanded_inputs.py). The setup pins immutable files and verifies their hashes before importing them.
+- **Optional independent sentiment recomputation:** rerun `prepare(recompute_sentiment=True)` after setup, then rerun from Section 3. This downloads the frozen encoder; it does not fine-tune it.
+- **Tools:** PyTorch, Transformers, scikit-learn, pandas, NumPy, PyArrow, Requests and IPython. Hermes Agent / OpenAI assisted implementation and review; the team must understand and explain the work.
+- **Format:** modelled on Veritas AI's ScamCheck sample submission. Finance brief §4.2.4; we adapted the market/source and added time-aware baselines, uncertainty, controls, text-kind tests and replay.
+""")
+metadata = {
+    'universe': 'expanded', 'quota_sampling': False,
+    'expected_code_cells': sum(cell['cell_type'] == 'code' for cell in cells),
+    'source_sha256': {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest() for name in SOURCE_FILES},
+    'bootstrap_revision': BOOTSTRAP_REVISION, 'bootstrap_sha256': BOOTSTRAP_HASHES,
+}
+nb = {'nbformat': 4, 'nbformat_minor': 5,
+      'metadata': {'kernelspec': {'display_name': 'Python 3', 'language': 'python', 'name': 'python3'},
+                   'language_info': {'name': 'python'}, 'colab': {'toc_visible': True}, 'hypecheck': metadata},
+      'cells': cells}
+path = ROOT / 'HypeCheck.ipynb'
 if path.exists():
- old=json.loads(path.read_text());a=[c for c in cells if c['cell_type']=='code'];b=[c for c in old['cells'] if c['cell_type']=='code']
- if [c['source'] for c in a]==[c['source'] for c in b]:
-  for x,y in zip(a,b):x['outputs']=y.get('outputs',[]);x['execution_count']=y.get('execution_count')
-path.write_text(json.dumps(nb,ensure_ascii=False,indent=1)+chr(10));print('Wrote sample-format notebook:',len(cells),'cells;',nb['metadata']['hypecheck']['expected_code_cells'],'code cells')
+    previous = json.loads(path.read_text())
+    old = [cell for cell in previous['cells'] if cell['cell_type'] == 'code']
+    new = [cell for cell in cells if cell['cell_type'] == 'code']
+    if [cell['source'] for cell in old] == [cell['source'] for cell in new]:
+        for current, prior in zip(new, old):
+            current['outputs'] = prior.get('outputs', [])
+            current['execution_count'] = prior.get('execution_count')
+path.write_text(json.dumps(nb, ensure_ascii=False, indent=1) + '\n')
+print('Wrote judge-facing notebook:', len(cells), 'cells;', metadata['expected_code_cells'], 'code cells')
