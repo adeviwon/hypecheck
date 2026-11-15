@@ -1,0 +1,18 @@
+{
+  "status": "passed",
+  "execution": "Clean workspace on server, not actual Google Colab",
+  "code_cells": 12,
+  "python_tests": 62,
+  "rich_tables": 9,
+  "accuracy_charts": 1,
+  "browser_python_parity_cases": 17,
+  "ui_handler_regression": "passed for model load, 13 coins, tweet, context and invalid input",
+  "clean_report_exact_match": true,
+  "source_hashes": {
+    "tweet_forecast.py": "d9732560a07ad65cc96fdb07d28b6d1d14dcc8dda06c71014883de2dbb019d4b",
+    "HypeCheck.ipynb": "51138ef838b86cbb27f3a8bdeddc4e57e30a223c2ef98e06cf0582e3b3ea63aa",
+    "artifacts/tweet-forecast-model.json": "c517d4023a29fe5c9741a90eec3d9ce963fe9e942b8c539dba9ffd3e8e1b00b0",
+    "docs/tweet-forecast-report.json": "96677c8deda002558a125356eced7810b43f1d7a5263699b7fd2f032a54f1b24",
+    "docs/predict.js": "dcc4ebb1c5fe39b14a504fe3808cbe8e6dad19cb6e8b08cb4c029e68723c9bd6"
+  }
+}

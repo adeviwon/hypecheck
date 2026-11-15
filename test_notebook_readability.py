@@ -24,8 +24,8 @@ class ReadabilityTests(unittest.TestCase):
     def test_reading_route_and_plain_language(self):
         text = '\n'.join(''.join(cell['source']) for cell in self.nb['cells'] if cell['cell_type'] == 'markdown')
         for phrase in ('Our user:', 'Bottom line:', 'Runtime → Run all', '## 1. Load',
-                       '## 4. Baselines', '## 6. Where', '## 8. Do some kinds',
-                       '## 9. The demo', '## 10. Results', '## 11. What should',
+                       '## 4. Baselines', '## 6. Where', '## 8. How much',
+                       '## 9. The demo', '## 10. Results', '## 11. Sources',
                        'Brier error', 'not independent confirmation', 'not fine-tuned'):
             self.assertIn(phrase, text)
         self.assertTrue(self.nb['metadata']['colab']['toc_visible'])
@@ -35,7 +35,8 @@ class ReadabilityTests(unittest.TestCase):
         metadata = self.nb['metadata']['hypecheck']
         for name, digest in metadata['source_sha256'].items():
             self.assertEqual(hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), digest)
-            self.assertEqual(colab_setup.FILE_DIGESTS[name], digest)
+            config=json.loads((ROOT / "tweet-forecast-source.json").read_text())
+            self.assertEqual(config["files"][name], digest)
         for name, digest in metadata['bootstrap_sha256'].items():
             self.assertEqual(hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), digest)
 

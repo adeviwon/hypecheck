@@ -1,23 +1,17 @@
-# HypeCheck — Signal or Noise?
+# HypeCheck — current submission
 
-**Track:** AI + Finance, adapted from brief §4.2.4.
+Track: AI + Finance
 
-**Code:** https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb
-**Write-up:** https://github.com/adeviwon/hypecheck
-**Demo:** https://adeviwon.github.io/hypecheck/headlines.html
+Code: https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb
 
-**Problem:** A beginner investor sees bullish memecoin posts and wonders whether they forecast tomorrow. We test rather than assume that claim.
+Demo: https://adeviwon.github.io/hypecheck/predict.html
 
-**Approach:** Prior-day original X-post sentiment for 13 memecoins. Frozen pretrained FinTwitBERT features plus logistic regression; chronological splits with purge gaps, both requested baselines, coin/market ablations and text-kind comparisons.
+Write-up: WRITEUP.md
 
-**Dataset:** 1,773 eligible original posts; 13 memecoins; 2,509 held-out coin-days across 193 UTC dates. Natural sentiment distribution, no quota split.
+Nathaniel Wong — model; Aaden Yick — data; Alastair Chu — demo. Team member emails and school details must be confirmed in the submission form.
 
-**Results:** Read the generated README and `docs/headline-report.json`; those are the source of truth. Do not copy an old headline number from a different model or split. Beating weak baselines on point accuracy does not demonstrate useful sentiment information. The study is exploratory on a reused period, not independent confirmation.
+The model is trained from raw public-post wording against actual next-UTC-day Binance outcomes. Section 5 visibly trains; Section 9 accepts a tweet and coin. The forecast is not a causal impact estimate. No live X feed is connected. Training and notebook execution were verified on the server, not an actual Colab runtime.
 
-**Investor boundary:** This project is a prototype and is not financial advice. No trade, profit, or causal-effect claim.
+Held-out coin-day-weighted accuracy: tweet-only 49.28%; tweet plus prior context 45.02%; training majority 51.60%. No demonstrated trading edge. Return error also fails its constant baseline. Full numbers and limitations: docs/tweet-forecast-report.json.
 
-**Team:** Nathaniel Wong (model), Aaden Yick (data), Alastair Chu (demo and write-up), Malvern College Hong Kong. Confirm each member's exact email/name/school in the form. Email addresses and a demonstration video have not been supplied here.
-
-**Execution evidence:** Notebook outputs were captured during a real clean-working-directory server run. Actual Google Colab execution is not claimed without Colab runtime evidence. The notebook installs its dependencies conditionally on Colab, fetches verified public inputs, and retrains the direction models.
-
-**Credits:** See README and notebook sources. AI coding assistance disclosed. Every team member must understand and explain the model and results.
+This project is a prototype and is not financial advice.

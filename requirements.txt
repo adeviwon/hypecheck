@@ -9,3 +9,4 @@ safetensors==0.8.0
 huggingface-hub==2.4.0
 torch==2.15.0+cpu
 setuptools==84.2.1
+ipython==9.18.1

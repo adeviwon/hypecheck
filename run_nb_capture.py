@@ -4,6 +4,8 @@ Not a substitute for a live Google Colab test.
 """
 import ast, contextlib, io, json, os, shlex, subprocess, sys, time, traceback
 from pathlib import Path
+from unittest.mock import patch
+from IPython.core.formatters import DisplayFormatter
 
 def execute(nb_path, workdir):
     nb_path = Path(nb_path).resolve()
@@ -24,9 +26,15 @@ def execute(nb_path, workdir):
         count += 1
         print(f'CELL {i}: {s.splitlines()[0][:85]}', flush=True)
         buf = io.StringIO()
+        rich = []
+        formatter = DisplayFormatter()
+        def capture_display(*objects, raw=False, metadata=None, **kwargs):
+            for obj in objects:
+                data, meta = (obj, {}) if raw else formatter.format(obj)
+                rich.append({"output_type":"display_data","data":data,"metadata":metadata or meta})
         c['execution_count'] = count
         try:
-            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+            with patch("IPython.display.display",capture_display), contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
                 if s.startswith('%%writefile '):
                     (first, body) = s.split('\n', 1)
                     p = Path(shlex.split(first)[1])
@@ -49,7 +57,7 @@ def execute(nb_path, workdir):
                             print(repr(v))
                     else:
                         exec(compile(t, '<cell>', 'exec'), g)
-            c['outputs'] = [{'output_type': 'stream', 'name': 'stdout', 'text': buf.getvalue().splitlines(keepends=True)}]
+            c['outputs'] = [{'output_type': 'stream', 'name': 'stdout', 'text': buf.getvalue().splitlines(keepends=True)}] + rich
         except Exception:
             c['outputs'] = [{'output_type': 'stream', 'name': 'stdout', 'text': buf.getvalue().splitlines(keepends=True)}, {'output_type': 'error', 'ename': type(sys.exception()).__name__, 'evalue': str(sys.exception()), 'traceback': traceback.format_exc().splitlines()}]
             nb_path.write_text(json.dumps(nb, ensure_ascii=False, indent=1) + '\n')
