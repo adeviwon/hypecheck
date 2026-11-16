@@ -1,16 +1,16 @@
 {
-  "revision": "53614134b3932f38dfcf881d8e0ee61b3200b12a",
+  "revision": "09e0b91d9fc0b9a8e8ccef02ac44b5205196290d",
   "files": {
     "sample_pipeline.py": "ce5f257a3be06365f21a8587a6206ebc20f387449ff6489c664fdf9ec3ad1cd6",
     "crowd_snapshot.py": "a32105c5fff454b15619a718a35997da441580866b0054e57e10861115cb134f",
     "crowd_app.py": "9b0c527cd800ae3caee7275c0a63fb72c7284d3a3bacc40afdb680e6b40ce081",
-    "test_sample_pipeline.py": "8a807fdc290380669780665a55dd9b79eb5604bc4dbc67f55f3f5d887af0e7c3",
-    "test_crowd_snapshot.py": "79cb9c9983d72e729bf069dc6d253125778d9e2e60ba774499c73ccf7caddb4d",
-    "test_crowd_app.py": "6a050e88d5fb010db242a5f934c6b15c5a674f45ad7485503902bd59785fee02",
+    "tests/test_sample_pipeline.py": "8a807fdc290380669780665a55dd9b79eb5604bc4dbc67f55f3f5d887af0e7c3",
+    "tests/test_crowd_snapshot.py": "79cb9c9983d72e729bf069dc6d253125778d9e2e60ba774499c73ccf7caddb4d",
+    "tests/test_crowd_app.py": "6a050e88d5fb010db242a5f934c6b15c5a674f45ad7485503902bd59785fee02",
     "judge_tables.py": "90da7f2881172eb1a0701ad2ee0df7c92221c58d40adf8df6048077ca9d6701f",
-    "test_judge_tables.py": "d72143a72278f6d05616380aba5b4af27bb4d9b10d7bbf3881170e0422645058",
+    "tests/test_judge_tables.py": "b14c61d334776624d02d292bf359ad47585a89fa2958ec96d2d3fdae5cac4a24",
     "tweet_demo.py": "0d53b2e43a0079460272b24bc246105841e594f3402353e1e6673b862370af48",
-    "test_tweet_demo.py": "3540dc1db0b2dad2a867fd83d1a70b7bb03d1ea12c815f77b7a46b9fe970b843"
+    "tests/test_tweet_demo.py": "1e79657743b9c6f2e5549e8cb54e5e9acfcc00fea1778a5981470e1b819eafee"
   },
   "trained_model": {
     "path": "artifacts/crowd-model.json",

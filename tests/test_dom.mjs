@@ -23,7 +23,7 @@ globalThis.document = {
 };
 globalThis.fetch = async () => ({ ok: true, json: async () => report });
 
-await import('./docs/app.js');
+await import('../docs/app.js');
 await new Promise(resolve => setTimeout(resolve, 250));
 
 function walk(el, out = []) {
