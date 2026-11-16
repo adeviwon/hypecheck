@@ -1,6 +1,6 @@
 # HypeCheck — two-minute recording script
 
-Record the real notebook/app, not a mock-up. Run all cells before recording; set RUN_APP=True in Section 9. Use a real public batch or the notebook’s first eligible historical batch; label a historical replay explicitly. Do not claim newly pasted text has a known future outcome. Keep the final recording under two minutes and check its actual duration.
+Record the real notebook/app, not a mock-up. Run all cells before recording; the input app opens automatically in Section 9. Use a real public batch or the notebook’s first eligible historical batch; label a historical replay explicitly. Do not claim newly pasted text has a known future outcome. Keep the final recording under two minutes and check its actual duration.
 
 | Time | Show | Suggested narration |
 |---|---|---|

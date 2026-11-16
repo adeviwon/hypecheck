@@ -14,7 +14,7 @@ md("""# HypeCheck — test the crowd, not just a tweet
 
 **Bottom line:** this experiment does not demonstrate a forecasting edge. We report that rather than turn a weak model into trading advice.
 
-**Runtime → Run all.** Section 5 visibly trains Model 1; Section 8 tests balanced training and character-based wording features. Section 9 runs the trained batch forecast and offers an optional interactive app. Source setup is collapsed; data loading stays short.
+**Runtime → Run all.** Section 5 visibly trains Model 1; Section 8 tests balanced training and character-based wording features. Section 9 runs the trained batch forecast and opens the interactive app automatically. Source setup is collapsed; data loading stays short.
 
 **Our investigation:** inspect real posts → establish simple baselines → train a word-based model → examine its mistakes → test later dates and new coins → test balanced training and character features → explain the predictions and findings. All price outcomes are historical market observations.
 
@@ -27,6 +27,12 @@ IN_COLAB="google.colab" in sys.modules
 if IN_COLAB:
     pins=["numpy==2.5.4","pandas==3.1.1","pyarrow==26.0.1","scikit-learn==1.9.1","requests==2.34.2","ipython==9.18.1","ipywidgets==8.1.9","transformers==5.23.0","safetensors==0.8.0"]
     subprocess.run([sys.executable,"-m","pip","install","-q",*pins],check=True)
+    try:
+        import torch
+        from transformers import AutoTokenizer,AutoModelForSequenceClassification
+    except (ImportError,OSError):
+        subprocess.run([sys.executable,"-m","pip","install","-q","torch==2.15.0+cpu","--index-url","https://download.pytorch.org/whl/cpu"],check=True)
+        import torch
 print("Environment ready; actual Google Colab runtime:",IN_COLAB)
 """,True)
 setup="SETUP_REV="+repr(bootstrap["revision"])+"\nBOOTSTRAP="+repr({"colab_setup.py":bootstrap["sha256"],"notebook_support.py":bootstrap["presentation_sha256"]})+"\nSOURCE_REV="+repr(cfg["revision"])+"\nSOURCE_FILES="+repr(cfg["files"])+"\n"
@@ -184,18 +190,18 @@ for content in panels(result,report):display(HTML(content))
 print("Historical reveal — actual next-day direction:","UP" if example.actual_up else "DOWN / FLAT")
 table(pd.DataFrame(result["toward_up"]+result["toward_down"]).rename(columns={"word":"Word","logit_contribution":"Contribution to this model score"}),"Actual word × TF-IDF contributions (logit units)")
 """)
-md("""### Optional interactive app
-Set RUN_APP=True and run the next cell. Paste public posts separated by blank lines, or CSV with a text column; choose a coin and click Analyse batch. Use CSV if an individual post itself contains blank lines. New text runs actual pinned FinTwitBERT inference, then the fitted forecast model—no phrase-list fallback.
+md("""### Try your own posts
+The input app opens automatically during Run all. Scroll to this cell in Section 9. Paste public posts separated by blank lines, or CSV with a text column; choose a coin and click Analyse batch. Use CSV if an individual post itself contains blank lines. New text runs actual pinned FinTwitBERT inference, then the fitted forecast model—no phrase-list fallback.
 
 Blank cutoff means actual submission time in UTC; exact next-day dates are displayed. A pasted old post is analysed at that submission time, not silently backtested. Supplied timestamps can be checked for window consistency, but their authenticity and complete platform coverage are not independently verified. No live X feed is connected.
 """)
 code("""#@title Open the real batch input app
-RUN_APP=False #@param {type:"boolean"}
+RUN_APP=True #@param {type:"boolean"}
 if RUN_APP:
     ui,app_state,controls=build_app(artifact)
     display(ui)
 else:
-    print("Optional app is off so Run all finishes. Set RUN_APP=True to enter your batch.")
+    print("App disabled. Set RUN_APP=True and rerun this cell to enter your batch.")
 """)
 md("""## 10. Results summary
 Compare the same rows before and after balanced weights, plus the character alternative. UP precision/recall expose the tradeoff that accuracy alone hides. Full confusion matrices and test support are saved in the report. The chart uses a full 0–100% axis.
@@ -240,7 +246,7 @@ r=json.loads((ROOT/"docs/crowd-report.json").read_text())
 readme="# HypeCheck — test the crowd\n\nSupply a batch of public X posts about one memecoin. HypeCheck separates estimated sample sentiment, next-day direction and the evidence for trusting that prediction. No claim of all-X coverage or causal price impact.\n\n[Current Colab](https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb)\n\n## What is actually trained\nDefault word TF-IDF + logistic regression; then the same features with balanced class weights; then a character-pattern alternative. Aggregate pinned FinTwitBERT sentiment and coin identity stay fixed between comparisons. The classifiers train on actual subsequent market outcomes, not model guesses. No transformer fine-tuning is claimed.\n\n## Honest results\n\n| Model | Later-time accuracy | Unseen-coin accuracy |\n|---|---:|---:|\n"
 for name in r["tests"]["later_time"]:
  readme+="| "+name+" | "+format(r["tests"]["later_time"][name]["accuracy"],".2%")+" | "+format(r["tests"]["unseen_coin_market"][name]["accuracy"],".2%")+" |\n"
-readme+="\nAll accuracy is coin-day weighted. Training: "+str(r["training"]["snapshots"])+" snapshots / "+str(r["training"]["coin_days"])+" coin-days. Later-time test: "+str(r["tests"]["later_time"]["Model 2"]["snapshots"])+" snapshots / "+str(r["tests"]["later_time"]["Model 2"]["coin_days"])+" coin-days. Unseen-coin test: "+str(r["tests"]["unseen_coin_market"]["Model 2"]["snapshots"])+" snapshots / "+str(r["tests"]["unseen_coin_market"]["Model 2"]["coin_days"])+" coin-days. The word-balanced model fails the coin-only control in both tests. No demonstrated forecasting edge.\n\n## Use\nRuntime → Run all. Section 5 visibly fits Model 1; Section 8 fits balanced Model 2 and the character trial. Section 9 runs a genuine historical batch and offers the optional multi-post/CSV app. New text runs the actual pinned pretrained sentiment network. Missing/invalid models or inputs block forecasting rather than fabricate scores.\n\nThe primary target is the next complete UTC day after the snapshot cutoff, open to close, not the next 24 hours. Blank runtime cutoff means the actual submission time; old pasted text is not an automatic backtest.\n\n## Reproduction\nUse Python 3.12 and the pinned requirements. `python prepare_verification.py` restores exact legacy cache inputs; `python sample_pipeline.py` trains the current batch experiment; `python verify_submission.py` verifies the submission. Source/data downloads are version-pinned and hash-checked. Server notebook execution is not an actual Colab runtime test.\n\n## Verification\nCurrent evidence: [artifacts/crowd-verification.json](artifacts/crowd-verification.json): recorded cell counts, test counts and genuine execution evidence. The model implementation received independent review; the presentation-only changes were rerun and regression-tested. Older submission-verification.json is explicitly archived.\n\n## Sources and limits\n[Public post archive](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto), [FinTwitBERT](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), actual Binance market bars, scikit-learn and dependencies; Veritas AI participant reference notebook and Finance brief; Hermes Agent/OpenAI coding assistance. Sparse, biased archive and previously explored test dates mean exploratory evidence, not independent confirmation. No complete live feed, independently calibrated probabilities, causal effect or trading recommendation.\n\n**This project is a prototype and is not financial advice.**\n"
+readme+="\nAll accuracy is coin-day weighted. Training: "+str(r["training"]["snapshots"])+" snapshots / "+str(r["training"]["coin_days"])+" coin-days. Later-time test: "+str(r["tests"]["later_time"]["Model 2"]["snapshots"])+" snapshots / "+str(r["tests"]["later_time"]["Model 2"]["coin_days"])+" coin-days. Unseen-coin test: "+str(r["tests"]["unseen_coin_market"]["Model 2"]["snapshots"])+" snapshots / "+str(r["tests"]["unseen_coin_market"]["Model 2"]["coin_days"])+" coin-days. The word-balanced model fails the coin-only control in both tests. No demonstrated forecasting edge.\n\n## Use\nRuntime → Run all. Section 5 visibly fits Model 1; Section 8 fits balanced Model 2 and the character trial. Section 9 runs a genuine historical batch and opens the multi-post/CSV app automatically. In Section 9, choose a coin, paste your own public posts separated by blank lines (or select CSV text), leave UTC cutoff blank and click Analyse batch. The first new-text run downloads the pinned sentiment network; allow that download to finish. No API key or paid service is required. New text runs the actual pinned pretrained sentiment network. Missing/invalid models or inputs block forecasting rather than fabricate scores.\n\nThe primary target is the next complete UTC day after the snapshot cutoff, open to close, not the next 24 hours. Blank runtime cutoff means the actual submission time; old pasted text is not an automatic backtest.\n\n## Reproduction\nUse Python 3.12 and the pinned requirements. `python prepare_verification.py` restores exact legacy cache inputs; `python sample_pipeline.py` trains the current batch experiment; `python verify_submission.py` verifies the submission. Source/data downloads are version-pinned and hash-checked. Server notebook execution is not an actual Colab runtime test.\n\n## Verification\nCurrent evidence: [artifacts/crowd-verification.json](artifacts/crowd-verification.json): recorded cell counts, test counts and genuine execution evidence. The model implementation received independent review; the presentation-only changes were rerun and regression-tested. Older submission-verification.json is explicitly archived.\n\n## Sources and limits\n[Public post archive](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto), [FinTwitBERT](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), actual Binance market bars, scikit-learn and dependencies; Veritas AI participant reference notebook and Finance brief; Hermes Agent/OpenAI coding assistance. Sparse, biased archive and previously explored test dates mean exploratory evidence, not independent confirmation. No complete live feed, independently calibrated probabilities, causal effect or trading recommendation.\n\n**This project is a prototype and is not financial advice.**\n"
 (ROOT/"README.md").write_text(readme)
 writeup_values={}
 for prefix,key in [("later","later_time"),("unseen","unseen_coin_market")]:
