@@ -17,7 +17,7 @@ md("""# HypeCheck — test the crowd, not just a tweet
 
 **Bottom line:** the posts did not earn that trust in this experiment. We say it out loud instead of dressing a weak model up as trading advice.
 
-**Runtime → Run all.** Section 5 visibly trains Model 1; Section 8 tests balanced training and character-based wording features. Section 9 runs the trained batch forecast and offers an optional interactive app. The source setup is collapsed; data loading stays short.
+**Try a tweet:** run the two setup cells and use **Check a custom tweet**. For the full study and editable **Enter tweets here** list in Section 9, choose **Runtime → Run all**. See the [technical write-up](https://github.com/adeviwon/hypecheck/blob/main/WRITEUP.md) for timing, feature transforms, and split rules.
 
 **Where we go:** look at real posts → set some simple baselines → train a word-based model → poke at its mistakes → try later dates and new coins → try balanced training and character features → explain the predictions and what we found. Every price outcome is a real historical market observation.
 
@@ -32,12 +32,14 @@ if IN_COLAB:
     subprocess.run([sys.executable,"-m","pip","install","-q",*pins],check=True)
 print("Environment ready; actual Google Colab runtime:",IN_COLAB)
 """,True)
-setup="SETUP_REV="+repr(bootstrap["revision"])+"\nBOOTSTRAP="+repr({"colab_setup.py":bootstrap["sha256"],"notebook_support.py":bootstrap["presentation_sha256"]})+"\nSOURCE_REV="+repr(cfg["revision"])+"\nSOURCE_FILES="+repr(cfg["files"])+"\n"
-setup+="""for name,(revision,expected) in {**{n:(SETUP_REV,h) for n,h in BOOTSTRAP.items()},**{n:(SOURCE_REV,h) for n,h in SOURCE_FILES.items()}}.items():
+setup="#@title Download and verify study files\nSETUP_REV="+repr(bootstrap["revision"])+"\nBOOTSTRAP="+repr({"colab_setup.py":bootstrap["sha256"],"notebook_support.py":bootstrap["presentation_sha256"]})+"\nSOURCE_REV="+repr(cfg["revision"])+"\nSOURCE_FILES="+repr(cfg["files"])+"\nFILE_REVISIONS="+repr(cfg["file_revisions"])+"\n"
+setup+="""def verified_bytes(name,revision,expected):
     url=f"https://raw.githubusercontent.com/adeviwon/hypecheck/{revision}/{name}"
     with urllib.request.urlopen(url,timeout=60) as response:payload=response.read()
     if hashlib.sha256(payload).hexdigest()!=expected:raise ValueError("Changed verified file: "+name)
-    Path(name).write_bytes(payload)
+    return payload
+for name,(revision,expected) in {**{n:(SETUP_REV,h) for n,h in BOOTSTRAP.items()},**{n:(SOURCE_REV,h) for n,h in SOURCE_FILES.items()}}.items():
+    Path(name).write_bytes(verified_bytes(name,FILE_REVISIONS.get(name,revision),expected))
 from colab_setup import prepare
 prepare()
 import numpy as np,pandas as pd
@@ -49,6 +51,30 @@ import tweet_demo as td
 print("Pinned sources and actual market inputs verified; no downloaded forecasts.")
 """
 code(setup,True)
+md("""## Try your own tweet
+Run the two setup cells above, choose the coin your tweet is about, paste the tweet text and run **Check a custom tweet**. Edit the text and rerun the same cell to try another. Use Section 9 to rate a list of posts.
+
+This cell uses the published Model 2 and FinTwitBERT. The first submitted tweet may trigger the sentiment model download. The output shows estimated language sentiment, the next full UTC day's direction estimate, and the coin-only baseline. The historical tests found no forecasting edge.
+""")
+model_pin = cfg["trained_model"]
+coins = json.loads((ROOT/model_pin["path"]).read_text())["coins"]
+custom = """#@title Check a custom tweet
+tweet_text = "" #@param {type:"string", placeholder:"Paste one tweet as plain text"}
+"""
+custom += 'coin = "DOGE" #@param ' + json.dumps(coins) + '\n'
+custom += f'published_model_pin = {tuple(model_pin[key] for key in ("path", "revision", "sha256"))!r}\n'
+custom += """if tweet_text.strip():
+    from crowd_app import panels
+    if "published_model" not in globals():
+        published_model = json.loads(verified_bytes(*published_model_pin))
+    tweet_csv = pd.DataFrame({"text": [tweet_text]}).to_csv(index=False)
+    custom_forecast = batch_check(tweet_csv, coin, artifact=published_model, input_format="csv")
+    for content in panels(custom_forecast, published_model["report"]):
+        display(HTML(content))
+else:
+    print("Paste a tweet, choose its coin and run this cell.")
+"""
+code(custom,True)
 md("""## 1. Load the data
 Real public X posts, real daily Binance prices. Frozen FinTwitBERT estimates the language sentiment; the next-day labels come from the **actual market**, not from the sentiment model. The forecast models downstream get trained during this run. The transformers are **not fine-tuned**.
 """)
@@ -92,7 +118,7 @@ for label,part in [("Later dates",later),("Unseen coins",unseen)]:
     display(Markdown("**Baseline finding:** "+label+" — the coin-only rule was correct "+format(scores["Coin only"]["accuracy"],".2%")+" of the time. The post-based model needs to improve on this, not just produce convincing-looking probabilities."))
 """)
 md("""## 5. Model 1: TF-IDF + logistic regression
-TF-IDF turns word usage into numbers, then logistic regression learns the actual price direction. Our fixed extra features are the estimated batch sentiment and the coin identity, and they stay identical across Model 1 and balanced Model 2 so the comparison is fair. TF-IDF and scaling are fit on training data only. The label: does the next complete UTC day close above its open?
+We turn word usage into numerical features with TF-IDF, then fit logistic regression to actual price direction. Our fixed extra features represent estimated batch sentiment and coin identity; they remain unchanged between Model 1 and balanced Model 2. TF-IDF, scaling, and the coin vocabulary fit on training data. Unseen coins have an all-zero identity vector. The six scaled inputs are mean bullish-minus-bearish, its standard deviation, mean bullish, bearish and neutral scores, and log(1 + post count). The label is whether the next complete UTC day closes above its open.
 """)
 code("""from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -249,15 +275,4 @@ if path.exists():
  if [c["source"] for c in a]==[c["source"] for c in b]:
   for x,y in zip(a,b):x["outputs"]=y.get("outputs",[]);x["execution_count"]=y.get("execution_count")
 path.write_text(json.dumps(nb,ensure_ascii=False,indent=1)+chr(10))
-r=json.loads((ROOT/"docs/crowd-report.json").read_text())
-readme="# HypeCheck — test the crowd\n\nSupply a batch of public X posts about one memecoin. HypeCheck separates estimated sample sentiment, next-day direction and the evidence for trusting that prediction. No claim of all-X coverage or causal price impact.\n\n[Current Colab](https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb)\n\n## What is actually trained\nDefault word TF-IDF + logistic regression; then the same features with balanced class weights; then a character-pattern alternative. Aggregate pinned FinTwitBERT sentiment and coin identity stay fixed between comparisons. The classifiers train on actual subsequent market outcomes, not model guesses. No transformer fine-tuning is claimed.\n\n## Honest results\n\n| Model | Later-time accuracy | Unseen-coin accuracy |\n|---|---:|---:|\n"
-for name in r["tests"]["later_time"]:
- readme+="| "+name+" | "+format(r["tests"]["later_time"][name]["accuracy"],".2%")+" | "+format(r["tests"]["unseen_coin_market"][name]["accuracy"],".2%")+" |\n"
-readme+="\nAll accuracy is coin-day weighted. Training: "+str(r["training"]["snapshots"])+" snapshots / "+str(r["training"]["coin_days"])+" coin-days. Later-time test: "+str(r["tests"]["later_time"]["Model 2"]["snapshots"])+" snapshots / "+str(r["tests"]["later_time"]["Model 2"]["coin_days"])+" coin-days. Unseen-coin test: "+str(r["tests"]["unseen_coin_market"]["Model 2"]["snapshots"])+" snapshots / "+str(r["tests"]["unseen_coin_market"]["Model 2"]["coin_days"])+" coin-days. The word-balanced model fails the coin-only control in both tests. No demonstrated forecasting edge.\n\n## Use\nRuntime → Run all. Section 5 visibly fits Model 1; Section 8 fits balanced Model 2 and the character trial. Section 9 runs a genuine historical batch and offers the optional multi-post/CSV app. New text runs the actual pinned pretrained sentiment network. Missing/invalid models or inputs block forecasting rather than fabricate scores.\n\nThe primary target is the next complete UTC day after the snapshot cutoff, open to close, not the next 24 hours. Blank runtime cutoff means the actual submission time; old pasted text is not an automatic backtest.\n\n## Reproduction\nUse Python 3.12 and the pinned requirements. `python prepare_verification.py` restores exact legacy cache inputs; `python sample_pipeline.py` trains the current batch experiment; `python verify_submission.py` verifies the submission. Source/data downloads are version-pinned and hash-checked. Server notebook execution is not an actual Colab runtime test.\n\n## Verification\nCurrent evidence: [artifacts/crowd-verification.json](artifacts/crowd-verification.json): recorded cell counts, test counts and genuine execution evidence. The model implementation received independent review; the presentation-only changes were rerun and regression-tested. Older submission-verification.json is explicitly archived.\n\n## Sources and limits\n[Public post archive](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto), [FinTwitBERT](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), actual Binance market bars, scikit-learn and dependencies; Veritas AI participant reference notebook and Finance brief; Hermes Agent/OpenAI coding assistance. Sparse, biased archive and previously explored test dates mean exploratory evidence, not independent confirmation. No complete live feed, independently calibrated probabilities, causal effect or trading recommendation.\n\n**This project is a prototype and is not financial advice.**\n"
-(ROOT/"README.md").write_text(readme)
-writeup_values={}
-for prefix,key in [("later","later_time"),("unseen","unseen_coin_market")]:
- for suffix,model in [("model","Model 2"),("coin","Coin only"),("up","Always up"),("previous","Previous completed day")]:
-  writeup_values[prefix+"_"+suffix]=format(r["tests"][key][model]["accuracy"],".2%")
-(ROOT/"WRITEUP.md").write_text((ROOT/"submission_writeup.md").read_text().format(**writeup_values))
 print("Generated judge-readable crowd forecast notebook:",len(cells),"cells")

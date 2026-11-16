@@ -197,7 +197,8 @@ class PipelineChecks(unittest.TestCase):
             joined = frame[frame.coin.eq(coin)].merge(hourly, on="date", how="inner", suffixes=("", "_source"))
             self.assertEqual(len(joined), 965)
             for column in p.INTRADAY:
-                np.testing.assert_allclose(joined[column].to_numpy(float), joined[column + "_source"].to_numpy(float), rtol=0, atol=0)
+                # CSV parsing and platform math can differ by a few floating-point units.
+                np.testing.assert_allclose(joined[column].to_numpy(float), joined[column + "_source"].to_numpy(float), rtol=1e-12, atol=1e-14)
             del joined, hourly
 
     def test_primary_metrics_are_unchanged_by_the_extension(self):

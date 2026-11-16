@@ -60,10 +60,11 @@ class ReadabilityTests(unittest.TestCase):
         self.assertIn("Our findings, in plain English",text)
         self.assertIn("not the probability",text.lower())
 
-    def test_judges_get_current_input_app_without_editing_code(self):
+    def test_judges_get_the_quick_form_and_editable_list(self):
         source = '\n'.join(''.join(c['source']) for c in self.nb['cells'] if c['cell_type'] == 'code')
-        self.assertIn('RUN_APP=True #@param', source)
-        self.assertNotIn('RUN_APP=False #@param', source)
+        self.assertIn('#@title Check a custom tweet', source)
+        self.assertIn('#@title Enter tweets here', source)
+        self.assertIn('td.run_block(TWEETS,COIN,artifact', source)
         for name in ['index.html', 'headlines.html', 'predict.html']:
             page = (ROOT / 'docs' / name).read_text()
             self.assertIn('https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb', page)
