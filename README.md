@@ -25,7 +25,9 @@ Default word TF-IDF + logistic regression; then the same features with balanced 
 All accuracy is coin-day weighted. Training: 991 snapshots / 556 coin-days. Later-time test: 155 snapshots / 127 coin-days. Unseen-coin test: 99 snapshots / 77 coin-days. The word-balanced model fails the coin-only control in both tests. No demonstrated forecasting edge.
 
 ## Use
-Runtime → Run all. Section 5 visibly fits Model 1; Section 8 fits balanced Model 2 and the character trial. Section 9 runs a genuine historical batch and opens the multi-post/CSV app automatically. In Section 9, choose a coin, paste your own public posts separated by blank lines (or select CSV text), leave UTC cutoff blank and click Analyse batch. The first new-text run downloads the pinned sentiment network; allow that download to finish. No API key or paid service is required. New text runs the actual pinned pretrained sentiment network. Missing/invalid models or inputs block forecasting rather than fabricate scores.
+**Try one tweet:** Open Colab, run the two setup cells, then choose a coin and paste the tweet in **Check a custom tweet**. Run that cell for the forecast. Edit the text and rerun it to try another tweet. This uses the published Model 2; the first tweet may trigger a FinTwitBERT download.
+
+**Run the full study or check a batch:** Runtime → Run all. Section 5 visibly fits Model 1; Section 8 fits balanced Model 2 and the character trial. Section 9 runs a genuine historical batch and opens the multi-post/CSV app automatically. In Section 9, choose a coin, paste your own public posts separated by blank lines (or select CSV text), leave UTC cutoff blank and click Analyse batch. The first new-text run downloads the pinned sentiment network; allow that download to finish. No API key or paid service is required. New text runs the actual pinned pretrained sentiment network. Missing/invalid models or inputs block forecasting rather than fabricate scores.
 
 The primary target is the next complete UTC day after the snapshot cutoff, open to close, not the next 24 hours. Blank runtime cutoff means the actual submission time; old pasted text is not an automatic backtest.
 

@@ -1,5 +1,10 @@
 {
   "revision": "77c33a0f3d81d05c74bc448085adab843be56fae",
+  "trained_model": {
+    "path": "artifacts/crowd-model.json",
+    "revision": "bec5fe039f8c82cdba17a6c44db3d5c41e173c32",
+    "sha256": "511f2ac5477051048f152ea957f5bb25e4004ba17ab606e8fe43a44f9e2b283b"
+  },
   "files": {
     "sample_pipeline.py": "ce5f257a3be06365f21a8587a6206ebc20f387449ff6489c664fdf9ec3ad1cd6",
     "crowd_snapshot.py": "a32105c5fff454b15619a718a35997da441580866b0054e57e10861115cb134f",
