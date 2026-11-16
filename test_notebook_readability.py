@@ -13,13 +13,23 @@ class ReadabilityTests(unittest.TestCase):
         self.nb = json.loads((ROOT / 'HypeCheck.ipynb').read_text())
 
     def test_no_embedded_source_or_data_walls(self):
+        # Infrastructure cells stay tiny. The one cell a judge is meant to edit holds the
+        # 40 demo posts, so it is bounded separately and must stay exactly 40 posts.
+        demo = 0
         for cell in self.nb['cells']:
-            if cell['cell_type'] == 'code':
-                source = ''.join(cell['source'])
-                self.assertLessEqual(len(source), 2400)
-                self.assertLessEqual(len(source.splitlines()), 24)
-                self.assertNotIn('EMBEDDED_INPUTS =', source)
-                self.assertNotIn('SOURCES =', source)
+            if cell['cell_type'] != 'code':
+                continue
+            source = ''.join(cell['source'])
+            self.assertNotIn('EMBEDDED_INPUTS =', source)
+            self.assertNotIn('SOURCES =', source)
+            if 'TWEETS = [' in source:
+                demo += 1
+                self.assertLessEqual(len(source), 8000)
+                self.assertEqual(sum(1 for line in source.splitlines() if line.startswith('    ')), 40)
+                continue
+            self.assertLessEqual(len(source), 2400)
+            self.assertLessEqual(len(source.splitlines()), 24)
+        self.assertEqual(demo, 1, 'the editable tweet block must exist exactly once')
 
     def test_reading_route_and_plain_language(self):
         text = '\n'.join(''.join(cell['source']) for cell in self.nb['cells'] if cell['cell_type'] == 'markdown')

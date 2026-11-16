@@ -3,7 +3,10 @@ import json
 from judge_tables import overall_findings,balance_findings,TEST_NAMES
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent
-cfg=json.loads((ROOT/"crowd-source.json").read_text());bootstrap=json.loads((ROOT/"colab-loader.json").read_text());cells=[]
+cfg=json.loads((ROOT/"crowd-source.json").read_text());bootstrap=json.loads((ROOT/"colab-loader.json").read_text())
+import tweet_demo
+EXAMPLES=tweet_demo.examples()
+cells=[]
 def md(s):cells.append({"cell_type":"markdown","metadata":{},"source":s.strip().splitlines(keepends=True)})
 def code(s,form=False):cells.append({"cell_type":"code","metadata":{"cellView":"form"} if form else {},"source":s.strip().splitlines(keepends=True),"execution_count":None,"outputs":[]})
 md("""# HypeCheck — test the crowd, not just a tweet
@@ -42,6 +45,7 @@ from IPython.display import display,HTML
 from notebook_support import table,accuracy_chart
 from sample_pipeline import *
 from judge_tables import *
+import tweet_demo as td
 print("Pinned sources and actual market inputs verified; no downloaded forecasts.")
 """
 code(setup,True)
@@ -184,18 +188,27 @@ for content in panels(result,report):display(HTML(content))
 print("Historical reveal — actual next-day direction:","UP" if example.actual_up else "DOWN / FLAT")
 table(pd.DataFrame(result["toward_up"]+result["toward_down"]).rename(columns={"word":"Word","logit_contribution":"Contribution to this model score"}),"Actual word × TF-IDF contributions (logit units)")
 """)
-md("""### Optional interactive app
-Set RUN_APP=True and run the next cell. Paste public posts separated by blank lines, or CSV with a text column; choose a coin and click Analyse batch. Use CSV if an individual post itself contains blank lines. New text runs actual pinned FinTwitBERT inference, then the fitted forecast model—no phrase-list fallback.
+md("""### Enter tweets here
+The list below holds **40 real public posts that were held out of training** — 20 from later dates, and 20 about coins the model never saw. The model rates every one of them, and because their next-day outcomes are already known, the table can show what it got right.
 
-Blank cutoff means actual submission time in UTC; exact next-day dates are displayed. A pasted old post is analysed at that submission time, not silently backtested. Supplied timestamps can be checked for window consistency, but their authenticity and complete platform coverage are not independently verified. No live X feed is connected.
+**Replace the list with your own posts and the same block rates them.** Your own posts are rated but not scored: their outcome has not happened yet, so there is nothing honest to mark against.
+
+Each entry is one post as a quoted string. A post may start with `TICKER | ` to set its coin; otherwise a cashtag in the text, or the `COIN` setting, is used. You can also delete the list and assign one triple-quoted block instead, with a blank line between posts.
 """)
-code("""#@title Open the real batch input app
-RUN_APP=False #@param {type:"boolean"}
-if RUN_APP:
-    ui,app_state,controls=build_app(artifact)
-    display(ui)
+code("""#@title Enter tweets here
+TWEETS = [
+""" + "\n".join('    ' + repr(f"{row['coin']} | {row['text']}") + "," for row in EXAMPLES) + """
+]
+COIN = "DOGE" #@param ["DOGE", "SHIB", "PEPE", "BONK", "FLOKI", "WIF", "TRUMP", "NEIRO", "PENGU", "PNUT", "TURBO", "BOME", "MEME"]
+RATE = True #@param {type:"boolean"}
+""",True)
+code("""if RATE:
+    tweet_table,tweet_summary,rated=td.run_block(TWEETS,COIN,artifact,known=td.examples())
+    table(tweet_table,"Every post, what the model estimated, and what the market actually did")
+    display(Markdown("**How many it got right:** "+td.finding(tweet_summary)))
+    print("Posts rated:",tweet_summary["rated"],"| with a known outcome:",tweet_summary["scored"])
 else:
-    print("Optional app is off so Run all finishes. Set RUN_APP=True to enter your batch.")
+    print("Set RATE=True to rate the posts in TWEETS.")
 """)
 md("""## 10. Results summary
 Compare the same rows before and after balanced weights, plus the character alternative. UP precision/recall expose the tradeoff that accuracy alone hides. Full confusion matrices and test support are saved in the report. The chart uses a full 0–100% axis.
@@ -214,7 +227,7 @@ md("""## 11. Limitations and next steps
 
 **Investor boundary:** this prototype does not justify trading because a batch sounds bullish or the model predicts UP. Its useful result is demonstrating how apparent text-based confidence can fail a fair future-market test.
 """)
-code("""for filename in ["test_crowd_snapshot.py","test_sample_pipeline.py","test_crowd_app.py","test_judge_tables.py"]:
+code("""for filename in ["test_crowd_snapshot.py","test_sample_pipeline.py","test_tweet_demo.py","test_crowd_app.py","test_judge_tables.py"]:
     completed=subprocess.run([sys.executable,filename],text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     print(completed.stdout);completed.check_returncode()
 print("Saved safe JSON models and genuine outputs. Actual Google Colab runtime:",IN_COLAB)
@@ -224,7 +237,7 @@ md("""## Sources
 - [FinTwitBERT sentiment](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), pinned safe weights; scores are model estimates, not human gold labels.
 - Actual Binance spot daily bars, frozen and hash-checked. [Market-data documentation](https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#klinecandlestick-data).
 - scikit-learn, PyTorch, Transformers, safetensors, NumPy, pandas, PyArrow, IPython and ipywidgets.
-- Veritas AI participant reference notebook (ScamCheck) and Finance brief, credited as methodological sources.
+- Veritas AI participant reference notebook and Finance brief, credited as methodological sources.
 - Hermes Agent/OpenAI coding assistance. The team must understand and explain the work. Third-party data/model terms remain applicable.
 
 *This project is a prototype and is not financial advice.*

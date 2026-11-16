@@ -15,7 +15,9 @@ HypeCheck is a research prototype that takes a batch of public X posts about one
 2. **Market Forecast** - an estimated probability that the coin's next complete UTC day closes above its open, with the exact UTC start and end of that day.
 3. **Evidence Check** - the input audit, the coin-only baseline for comparison, and a plain statement that our own tests found no forecasting edge.
 
-There are two ways to use it. On the [live page](https://adeviwon.github.io/hypecheck/live.html) there is one box - **"Paste tweet here"**. Paste a public post, and the trained model runs in the browser and returns the estimated chance of an up day, the exact forecast window, the words that moved the score, and the evidence against the baselines. Nothing is uploaded and no server is involved; the coin is read from the cashtag in the post. The supplied Google Colab notebook runs the full pipeline instead, including the frozen sentiment block and the error analysis, and ships fully executed with saved outputs so a judge can see every number without running anything.
+A user runs our supplied Google Colab notebook, pastes public posts (or CSV) for a coin, and reads the result. The notebook ships fully executed with saved outputs, so a judge can see every number without running anything.
+
+It also carries a block headed **"Enter tweets here"**, pre-filled with **40 real public posts that were held out of training** - 20 from later dates and 20 about coins the model never saw. The model rates every one of them, and because their next-day outcomes are already known, the table shows what it got right: the model was correct on **14 of 40 (35.0%)**, against **22 of 40 (55.0%)** for the coin-only baseline and 16 of 40 (40.0%) for always saying "up". A judge can delete the list and paste their own posts; those are rated in the same way but not scored, because their outcome has not happened yet.
 
 The prototype covers 13 memecoins. Five are used for training - **DOGE, SHIB, PEPE, BONK, FLOKI**. Eight are held out completely - **WIF, TRUMP, NEIRO, PENGU, PNUT, TURBO, BOME, MEME** - so we can test coins the model has never seen.
 
@@ -40,7 +42,6 @@ Our own idea was to test whether social-media wording carries information beyond
 - **Prediction:** logistic regression over word TF-IDF features plus the sentiment summary and coin identity. We chose logistic regression because it is honest with a sparse archive and because its word coefficients can be read and explained.
 - **Three variants, one change at a time:** Model 1 is the default word model. Model 2 changes **only** the class weights to balanced. A third trial replaces words with character n-grams (char_wb 2-5, sublinear TF, balanced, C=10). Sentiment and coin features are identical across all three, so any difference comes from the text representation.
 - **Target:** the next complete UTC day after the cutoff, close greater than open. Flat counts as not up. This is not a rolling 24 hours and not a same-day move.
-- **What runs in the browser:** the live page runs the same wording + coin pipeline **without** the sentiment block, because the frozen neural sentiment model cannot run in a static page. It is trained on the same batches with the same target and weighting, and we report its own held-out scores below rather than the full model's. The Colab runs the complete model.
 
 ## Results
 
@@ -58,7 +59,6 @@ All figures are coin-day weighted, on data the model never trained on.
 
 Probability error (Brier, lower is better): Model 2 scored **0.2768** later-time and **0.2662** on unseen coins, against the coin-only baseline's **0.2532** and **0.2484**.
 
-The browser model on the live page scores **41.21%** on later dates and **50.22%** on unseen coins, against the same coin-only baseline of **51.18%** and **55.84%**. It loses too. We state that on the page itself rather than only in this write-up.
 
 **Our baseline scored higher than our model.** The wording and sentiment models did not beat knowing the coin alone in either test. In the later-time test the balanced word model was 14.4 accuracy points *worse* than the coin-only baseline (95% interval -23.8 to -3.9 points); on unseen coins it was 12.0 points worse (interval -24.1 to +1.5). Balancing the classes did not create an edge, and neither did character features.
 

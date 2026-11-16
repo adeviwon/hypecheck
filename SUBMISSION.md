@@ -7,17 +7,16 @@
 **Project:** HypeCheck — test the crowd
 **Summary:** HypeCheck tests whether public memecoin-post wording and estimated sentiment help predict the next complete UTC day’s direction. Its Colab accepts batches of public posts or CSV and separates sentiment, a trained forecast and evidence warnings. Chronological and unseen-coin tests show no forecasting advantage over a coin-only baseline. We report actual failures rather than present bullish language as trading evidence.
 
-**Live demo (one box, runs in your browser):** https://adeviwon.github.io/hypecheck/live.html
 **Code:** https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb
 **Repository:** https://github.com/adeviwon/hypecheck
 **Write-up:** [WRITEUP.md](WRITEUP.md)
 **Recording script:** [DEMO_SCRIPT.md](DEMO_SCRIPT.md)
 
-The pinned code link freezes the verified notebook and model; the final packet refines documentation only. Open Runtime → Run all; in Section 9 set RUN_APP=True to enter posts. Existing Drive copies do not update automatically.
+The pinned code link freezes the verified notebook and model; the final packet refines documentation only. Open Runtime → Run all, then use the "Enter tweets here" block in Section 9 to rate your own posts. Existing Drive copies do not update automatically.
 
 ## Before pressing Submit
 - [ ] Open the pinned notebook in Google Colab and run all in the actual Colab runtime. Server execution is verified; this runtime/install path is not yet verified.
-- [ ] Record and upload the required demo video, maximum two minutes, showing the live page. Put its accessible URL in the form. No completed recording is included in this packet.
+- [ ] Record and upload the required demo video, maximum two minutes, showing the "Enter tweets here" block and its results table. Put its accessible URL in the form. No completed recording is included in this packet.
 - [ ] Confirm every team member’s exact name, registration email, school and eligibility privately in the official form. Do not publish emails in the repository.
 - [ ] Confirm contributions, build-window compliance and that all teammates understand the code and AI assistance.
 - [ ] Test code, write-up and video links logged out. Keep the repository public.
