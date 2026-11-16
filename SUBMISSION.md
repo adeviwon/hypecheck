@@ -8,7 +8,8 @@
 **Summary:** HypeCheck tests whether public memecoin-post wording and estimated sentiment help predict the next complete UTC day’s direction. Its Colab accepts batches of public posts or CSV and separates sentiment, a trained forecast and evidence warnings. Chronological and unseen-coin tests show no forecasting advantage over a coin-only baseline. We report actual failures rather than present bullish language as trading evidence.
 
 **Code:** https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb
-**Repository:** https://github.com/adeviwon/hypecheck
+**Repository:** https://github.com/adeviwon/hypecheck  
+**Judge instructions and limits:** [JUDGE_READINESS.md](JUDGE_READINESS.md)
 **Write-up:** [WRITEUP.md](WRITEUP.md)
 **Recording script:** [DEMO_SCRIPT.md](DEMO_SCRIPT.md)
 

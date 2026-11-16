@@ -32,12 +32,14 @@ if IN_COLAB:
     subprocess.run([sys.executable,"-m","pip","install","-q",*pins],check=True)
 print("Environment ready; actual Google Colab runtime:",IN_COLAB)
 """,True)
-setup="SETUP_REV="+repr(bootstrap["revision"])+"\nBOOTSTRAP="+repr({"colab_setup.py":bootstrap["sha256"],"notebook_support.py":bootstrap["presentation_sha256"]})+"\nSOURCE_REV="+repr(cfg["revision"])+"\nSOURCE_FILES="+repr(cfg["files"])+"\n"
-setup+="""for name,(revision,expected) in {**{n:(SETUP_REV,h) for n,h in BOOTSTRAP.items()},**{n:(SOURCE_REV,h) for n,h in SOURCE_FILES.items()}}.items():
+setup="#@title Download and verify study files\nSETUP_REV="+repr(bootstrap["revision"])+"\nBOOTSTRAP="+repr({"colab_setup.py":bootstrap["sha256"],"notebook_support.py":bootstrap["presentation_sha256"]})+"\nSOURCE_REV="+repr(cfg["revision"])+"\nSOURCE_FILES="+repr(cfg["files"])+"\n"
+setup+="""def verified_bytes(name,revision,expected):
     url=f"https://raw.githubusercontent.com/adeviwon/hypecheck/{revision}/{name}"
     with urllib.request.urlopen(url,timeout=60) as response:payload=response.read()
     if hashlib.sha256(payload).hexdigest()!=expected:raise ValueError("Changed verified file: "+name)
-    Path(name).write_bytes(payload)
+    return payload
+for name,(revision,expected) in {**{n:(SETUP_REV,h) for n,h in BOOTSTRAP.items()},**{n:(SOURCE_REV,h) for n,h in SOURCE_FILES.items()}}.items():
+    Path(name).write_bytes(verified_bytes(name,revision,expected))
 from colab_setup import prepare
 prepare()
 import numpy as np,pandas as pd
@@ -49,6 +51,28 @@ import tweet_demo as td
 print("Pinned sources and actual market inputs verified; no downloaded forecasts.")
 """
 code(setup,True)
+md("""## Try your own tweet
+Run the two setup cells, choose the coin, paste one tweet and run **Check a custom tweet**. It uses the published model, so it works before the study is trained. Section 9 rates a whole list of posts at once and scores them against what the market did.
+""")
+model_pin = cfg["trained_model"]
+coins = json.loads((ROOT/model_pin["path"]).read_text())["coins"]
+custom = """#@title Check a custom tweet
+tweet_text = "" #@param {type:"string", placeholder:"Paste one tweet as plain text"}
+"""
+custom += 'coin = "DOGE" #@param ' + json.dumps(coins) + '\n'
+custom += f'published_model_pin = {tuple(model_pin[key] for key in ("path", "revision", "sha256"))!r}\n'
+custom += """if tweet_text.strip():
+    from crowd_app import panels
+    if "published_model" not in globals():
+        published_model = json.loads(verified_bytes(*published_model_pin))
+    tweet_csv = pd.DataFrame({"text": [tweet_text]}).to_csv(index=False)
+    custom_forecast = batch_check(tweet_csv, coin, artifact=published_model, input_format="csv")
+    for content in panels(custom_forecast, published_model["report"]):
+        display(HTML(content))
+else:
+    print("Paste a tweet, choose its coin and run this cell.")
+"""
+code(custom,True)
 md("""## 1. Load the data
 Real original public X posts and actual daily Binance prices. Frozen FinTwitBERT estimates language sentiment; next-day labels come from the **actual market**, not the sentiment model. The downstream forecast models are trained during this run. Transformers are **not fine-tuned**.
 """)
@@ -253,7 +277,7 @@ r=json.loads((ROOT/"docs/crowd-report.json").read_text())
 readme="# HypeCheck — test the crowd\n\nSupply a batch of public X posts about one memecoin. HypeCheck separates estimated sample sentiment, next-day direction and the evidence for trusting that prediction. No claim of all-X coverage or causal price impact.\n\n[Current Colab](https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb)\n\n## What is actually trained\nDefault word TF-IDF + logistic regression; then the same features with balanced class weights; then a character-pattern alternative. Aggregate pinned FinTwitBERT sentiment and coin identity stay fixed between comparisons. The classifiers train on actual subsequent market outcomes, not model guesses. No transformer fine-tuning is claimed.\n\n## Honest results\n\n| Model | Later-time accuracy | Unseen-coin accuracy |\n|---|---:|---:|\n"
 for name in r["tests"]["later_time"]:
  readme+="| "+name+" | "+format(r["tests"]["later_time"][name]["accuracy"],".2%")+" | "+format(r["tests"]["unseen_coin_market"][name]["accuracy"],".2%")+" |\n"
-readme+="\nAll accuracy is coin-day weighted. Training: "+str(r["training"]["snapshots"])+" snapshots / "+str(r["training"]["coin_days"])+" coin-days. Later-time test: "+str(r["tests"]["later_time"]["Model 2"]["snapshots"])+" snapshots / "+str(r["tests"]["later_time"]["Model 2"]["coin_days"])+" coin-days. Unseen-coin test: "+str(r["tests"]["unseen_coin_market"]["Model 2"]["snapshots"])+" snapshots / "+str(r["tests"]["unseen_coin_market"]["Model 2"]["coin_days"])+" coin-days. The word-balanced model fails the coin-only control in both tests. No demonstrated forecasting edge.\n\n## Use\nRuntime → Run all. Section 5 visibly fits Model 1; Section 8 fits balanced Model 2 and the character trial. Section 9 runs a genuine historical batch and offers the optional multi-post/CSV app. New text runs the actual pinned pretrained sentiment network. Missing/invalid models or inputs block forecasting rather than fabricate scores.\n\nThe primary target is the next complete UTC day after the snapshot cutoff, open to close, not the next 24 hours. Blank runtime cutoff means the actual submission time; old pasted text is not an automatic backtest.\n\n## Reproduction\nUse Python 3.12 and the pinned requirements. `python prepare_verification.py` restores exact legacy cache inputs; `python sample_pipeline.py` trains the current batch experiment; `python verify_submission.py` verifies the submission. Source/data downloads are version-pinned and hash-checked. Server notebook execution is not an actual Colab runtime test.\n\n## Verification\nCurrent evidence: [artifacts/crowd-verification.json](artifacts/crowd-verification.json): recorded cell counts, test counts and genuine execution evidence. The model implementation received independent review; the presentation-only changes were rerun and regression-tested. Older submission-verification.json is explicitly archived.\n\n## Sources and limits\n[Public post archive](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto), [FinTwitBERT](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), actual Binance market bars, scikit-learn and dependencies; Veritas AI participant reference notebook and Finance brief; Hermes Agent/OpenAI coding assistance. Sparse, biased archive and previously explored test dates mean exploratory evidence, not independent confirmation. No complete live feed, independently calibrated probabilities, causal effect or trading recommendation.\n\n**This project is a prototype and is not financial advice.**\n"
+readme+="\nAll accuracy is coin-day weighted. Training: "+str(r["training"]["snapshots"])+" snapshots / "+str(r["training"]["coin_days"])+" coin-days. Later-time test: "+str(r["tests"]["later_time"]["Model 2"]["snapshots"])+" snapshots / "+str(r["tests"]["later_time"]["Model 2"]["coin_days"])+" coin-days. Unseen-coin test: "+str(r["tests"]["unseen_coin_market"]["Model 2"]["snapshots"])+" snapshots / "+str(r["tests"]["unseen_coin_market"]["Model 2"]["coin_days"])+" coin-days. The word-balanced model fails the coin-only control in both tests. No demonstrated forecasting edge.\n\n## Use\n**Try one tweet:** open Colab, run the two setup cells, then paste a tweet in **Check a custom tweet**. It uses the published model, so it works before training.\n\n**Rate a list of 40 posts:** Section 9's **Enter tweets here** block holds 40 real posts held out of training, shows what the model got right, and accepts your own list.\n\nRuntime → Run all. Section 5 visibly fits Model 1; Section 8 fits balanced Model 2 and the character trial. Section 9 runs a genuine historical batch and offers the optional multi-post/CSV app. New text runs the actual pinned pretrained sentiment network. Missing/invalid models or inputs block forecasting rather than fabricate scores.\n\nThe primary target is the next complete UTC day after the snapshot cutoff, open to close, not the next 24 hours. Blank runtime cutoff means the actual submission time; old pasted text is not an automatic backtest.\n\n## Reproduction\nUse Python 3.12 and the pinned requirements. `python prepare_verification.py` restores exact legacy cache inputs; `python sample_pipeline.py` trains the current batch experiment; `python verify_submission.py` verifies the submission. Source/data downloads are version-pinned and hash-checked. Server notebook execution is not an actual Colab runtime test.\n\n## Verification\nCurrent evidence: [artifacts/crowd-verification.json](artifacts/crowd-verification.json); judge instructions and limitations: [JUDGE_READINESS.md](JUDGE_READINESS.md). The model implementation received independent review; the presentation-only changes were rerun and regression-tested. Older submission-verification.json is explicitly archived.\n\n## Sources and limits\n[Public post archive](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto), [FinTwitBERT](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), actual Binance market bars, scikit-learn and dependencies; Veritas AI participant reference notebook and Finance brief; Hermes Agent/OpenAI coding assistance. Sparse, biased archive and previously explored test dates mean exploratory evidence, not independent confirmation. No complete live feed, independently calibrated probabilities, causal effect or trading recommendation.\n\n**This project is a prototype and is not financial advice.**\n"
 (ROOT/"README.md").write_text(readme)
 writeup_values={}
 for prefix,key in [("later","later_time"),("unseen","unseen_coin_market")]:

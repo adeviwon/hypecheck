@@ -1,15 +1,20 @@
 {
-  "revision": "8e30803917e4654ceb5ff9dc8ecfcd3307835942",
+  "revision": "e1ee51c0b61d0f955244e1a6a52bff53a167c84d",
   "files": {
-    "sample_pipeline.py": "268751cd13f2c47017a96cfb24e5d26ddedd2318748596823bf4be880bdd9605",
+    "sample_pipeline.py": "ce5f257a3be06365f21a8587a6206ebc20f387449ff6489c664fdf9ec3ad1cd6",
     "crowd_snapshot.py": "a32105c5fff454b15619a718a35997da441580866b0054e57e10861115cb134f",
     "crowd_app.py": "9b0c527cd800ae3caee7275c0a63fb72c7284d3a3bacc40afdb680e6b40ce081",
-    "test_sample_pipeline.py": "ac9c345ed02a4803d428119640b915b5ba410c3ddeb23a3dba398d570ee4cd4a",
+    "test_sample_pipeline.py": "8a807fdc290380669780665a55dd9b79eb5604bc4dbc67f55f3f5d887af0e7c3",
     "test_crowd_snapshot.py": "79cb9c9983d72e729bf069dc6d253125778d9e2e60ba774499c73ccf7caddb4d",
-    "test_crowd_app.py": "ccf94fbc82dff1cd9194eb945db78b8498e433cdb8f93696339a77ce6bb177f1",
+    "test_crowd_app.py": "6a050e88d5fb010db242a5f934c6b15c5a674f45ad7485503902bd59785fee02",
     "judge_tables.py": "90da7f2881172eb1a0701ad2ee0df7c92221c58d40adf8df6048077ca9d6701f",
     "test_judge_tables.py": "d72143a72278f6d05616380aba5b4af27bb4d9b10d7bbf3881170e0422645058",
     "tweet_demo.py": "45cc4ae3dc94018a0041b8acf7503009d6b722cf4ac892a810618f251df4b11e",
     "test_tweet_demo.py": "8d459700ef0b04190064b5bffd2a6beaf0a05fb3564445987a1e58c329d88d48"
+  },
+  "trained_model": {
+    "path": "artifacts/crowd-model.json",
+    "revision": "bec5fe039f8c82cdba17a6c44db3d5c41e173c32",
+    "sha256": "511f2ac5477051048f152ea957f5bb25e4004ba17ab606e8fe43a44f9e2b283b"
   }
 }

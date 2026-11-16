@@ -60,14 +60,20 @@ class ReadabilityTests(unittest.TestCase):
         self.assertIn("Our findings, in plain English",text)
         self.assertIn("not the probability",text.lower())
 
-    def test_judges_get_current_input_app_without_editing_code(self):
-        source = '\n'.join(''.join(c['source']) for c in self.nb['cells'] if c['cell_type'] == 'code')
-        self.assertIn('RUN_APP=True #@param', source)
-        self.assertNotIn('RUN_APP=False #@param', source)
+    def test_judges_get_current_input_blocks_without_editing_code(self):
+        code = [''.join(cell['source']) for cell in self.nb['cells'] if cell['cell_type'] == 'code']
+        source = '\n'.join(code)
+        # a one-tweet form that runs before training, and the editable 40-post block
+        self.assertIn('#@title Check a custom tweet', source)
+        self.assertIn('#@title Enter tweets here', source)
+        self.assertIn('TWEETS = [', source)
+        self.assertIn('td.run_block(TWEETS,COIN,artifact,known=td.examples())', source)
+        # the removed interactive app must not come back
+        self.assertNotIn('RUN_APP', source)
+        self.assertNotIn('build_app(', source)
         for name in ['index.html', 'headlines.html', 'predict.html']:
             page = (ROOT / 'docs' / name).read_text()
             self.assertIn('https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb', page)
-            self.assertIn('Section 9', page)
 
     def test_verified_source_and_support_parity(self):
         import colab_setup
