@@ -25,17 +25,15 @@ All accuracy is coin-day weighted. Training: 991 snapshots / 556 coin-days. Late
 ## Use
 **Try one tweet:** open Colab, run the two setup cells, then paste a tweet in **Check a custom tweet**. It uses the published model, so it works before training.
 
-**Rate a list of 40 posts:** Section 9's **Enter tweets here** block holds 40 real posts held out of training, shows what the model got right, and accepts your own list.
+**Rate several tweets:** Choose **Runtime → Run all**, then replace the quoted entries in Section 9's **Enter tweets here** list. Rerun the list cell and the scoring cell below it. A supported `TICKER | ` prefix takes precedence over cashtags and the default coin. The 40 default entries have known outcomes. A pasted entry is scored against an archived outcome only when its coin and exact text match that example.
 
-Runtime → Run all. Section 5 visibly fits Model 1; Section 8 fits balanced Model 2 and the character trial. Section 9 runs a genuine historical batch and offers the optional multi-post/CSV app. New text runs the actual pinned pretrained sentiment network. Missing/invalid models or inputs block forecasting rather than fabricate scores.
-
-The primary target is the next complete UTC day after the snapshot cutoff, open to close, not the next 24 hours. Blank runtime cutoff means the actual submission time; old pasted text is not an automatic backtest.
+For new text, the notebook runs the pinned FinTwitBERT checkpoint. The prediction target is the next complete UTC day, open to close.
 
 ## Reproduction
 Use Python 3.12 and the pinned requirements. `python prepare_verification.py` restores exact legacy cache inputs; `python sample_pipeline.py` trains the current batch experiment; `python verify_submission.py` verifies the submission. Source/data downloads are version-pinned and hash-checked. Server notebook execution is not an actual Colab runtime test.
 
 ## Verification
-Current evidence: [artifacts/crowd-verification.json](artifacts/crowd-verification.json); judge instructions and limitations: [JUDGE_READINESS.md](JUDGE_READINESS.md). The model implementation received independent review; the presentation-only changes were rerun and regression-tested. Older submission-verification.json is explicitly archived.
+Run `python verify_submission.py` to check source hashes, notebook regeneration, and the regression suite. See the [technical write-up](WRITEUP.md) and the [held-out prediction ledger](artifacts/crowd-predictions.csv).
 
 ## Sources and limits
 [Public post archive](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto), [FinTwitBERT](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), actual Binance market bars, scikit-learn and dependencies; Veritas AI participant reference notebook and Finance brief; Hermes Agent/OpenAI coding assistance. Sparse, biased archive and previously explored test dates mean exploratory evidence, not independent confirmation. No complete live feed, independently calibrated probabilities, causal effect or trading recommendation.

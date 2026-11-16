@@ -1,5 +1,5 @@
 {
-  "revision": "e1ee51c0b61d0f955244e1a6a52bff53a167c84d",
+  "revision": "53614134b3932f38dfcf881d8e0ee61b3200b12a",
   "files": {
     "sample_pipeline.py": "ce5f257a3be06365f21a8587a6206ebc20f387449ff6489c664fdf9ec3ad1cd6",
     "crowd_snapshot.py": "a32105c5fff454b15619a718a35997da441580866b0054e57e10861115cb134f",
@@ -9,8 +9,8 @@
     "test_crowd_app.py": "6a050e88d5fb010db242a5f934c6b15c5a674f45ad7485503902bd59785fee02",
     "judge_tables.py": "90da7f2881172eb1a0701ad2ee0df7c92221c58d40adf8df6048077ca9d6701f",
     "test_judge_tables.py": "d72143a72278f6d05616380aba5b4af27bb4d9b10d7bbf3881170e0422645058",
-    "tweet_demo.py": "45cc4ae3dc94018a0041b8acf7503009d6b722cf4ac892a810618f251df4b11e",
-    "test_tweet_demo.py": "8d459700ef0b04190064b5bffd2a6beaf0a05fb3564445987a1e58c329d88d48"
+    "tweet_demo.py": "0d53b2e43a0079460272b24bc246105841e594f3402353e1e6673b862370af48",
+    "test_tweet_demo.py": "3540dc1db0b2dad2a867fd83d1a70b7bb03d1ea12c815f77b7a46b9fe970b843"
   },
   "trained_model": {
     "path": "artifacts/crowd-model.json",
