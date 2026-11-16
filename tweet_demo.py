@@ -67,14 +67,13 @@ def _item(entry, default_coin, coins, number):
     """One list entry is one post: strip an optional 'TICKER | ' prefix, then find the coin."""
     body = str(entry).strip()
     coin = default_coin
-    first, _, rest = body.partition("\n")
+    first = body.partition("\n")[0]
     match = PREFIX.match(first)
     if match and match.group(1).upper() in coins:
         coin = match.group(1).upper()
         body = body[match.start(2):]
-    found = [c for c in CASHTAG.findall(body) if c.upper() in coins]
-    if found and coin == default_coin:
-        coin = found[0].upper()
+    else:
+        coin = next((tag.upper() for tag in CASHTAG.findall(body) if tag.upper() in coins), default_coin)
     if len(body) < 8:
         raise ValueError(f"Post {number} is shorter than 8 characters: {body[:40]!r}")
     return {"coin": coin, "text": body}
@@ -101,9 +100,8 @@ def parse_lines(blob, default_coin, coins):
         if match and match.group(1).upper() in coins:
             coin = match.group(1).upper()
             body = match.group(2).strip() + (("\n" + rest) if rest else "")
-        found = [c for c in CASHTAG.findall(body) if c.upper() in coins]
-        if found and coin == default_coin:
-            coin = found[0].upper()
+        else:
+            coin = next((tag.upper() for tag in CASHTAG.findall(body) if tag.upper() in coins), default_coin)
         if len(body) < 8:
             raise ValueError(f"Post {number} is shorter than 8 characters: {body[:40]!r}")
         out.append({"coin": coin, "text": body})
@@ -150,10 +148,10 @@ def run_block(blob, default_coin, artifact, known=None):
     else:
         items = parse_lines(blob, default_coin, coins)
     rated = rate(items, artifact)
-    lookup = {row["text"]: row for row in (known if known is not None else examples())}
+    lookup = {(row["coin"], row["text"]): row for row in (known if known is not None else examples())}
     scored = []
     for row in rated:
-        match = lookup.get(row["text"])
+        match = lookup.get((row["coin"], row["text"]))
         if match:
             row["known"] = True
             row["actual_up"] = match["actual_up"]

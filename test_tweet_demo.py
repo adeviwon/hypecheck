@@ -46,6 +46,13 @@ class TweetDemoTests(unittest.TestCase):
         self.assertEqual(td._item("no ticker at all in this post", "DOGE", COINS, 1)["coin"], "DOGE")
         self.assertEqual(td._item("TRUMP | $TRUMP has the volume today", "DOGE", COINS, 1)["coin"], "TRUMP")
 
+    def test_explicit_default_coin_overrides_conflicting_cashtag(self):
+        text = "Traders are discussing $PEPE today."
+        entry = f"DOGE | {text}"
+        expected = {"coin": "DOGE", "text": text}
+        self.assertEqual(td._item(entry, "DOGE", COINS, 1), expected)
+        self.assertEqual(td.parse_lines(entry, "DOGE", COINS), [expected])
+
     def test_scoring_matches_the_real_outcome(self):
         table, summary, rated = td.run_block(self.entries, "DOGE", ARTIFACT, known=self.known)
         self.assertEqual(summary["scored"], 40)
@@ -65,6 +72,14 @@ class TweetDemoTests(unittest.TestCase):
         self.assertEqual(summary["scored"], 0)
         self.assertFalse(rated[0]["known"])
         self.assertNotIn("model_accuracy", summary)
+        self.assertEqual(table.iloc[0]["Market actually did"], "unknown (your post)")
+
+    def test_known_text_for_another_coin_has_no_outcome(self):
+        row = next(example for example in self.known if example["coin"] == "BONK")
+        table, summary, rated = td.run_block([f"SHIB | {row['text']}"], "DOGE", ARTIFACT, known=self.known)
+        self.assertEqual(summary, {"rated": 1, "scored": 0})
+        self.assertEqual(rated[0]["coin"], "SHIB")
+        self.assertIsNone(rated[0]["actual_up"])
         self.assertEqual(table.iloc[0]["Market actually did"], "unknown (your post)")
 
     def test_interval_is_a_real_interval(self):
