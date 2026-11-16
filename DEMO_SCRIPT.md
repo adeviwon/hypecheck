@@ -1,14 +1,20 @@
-# HypeCheck — two-minute recording script
+# HypeCheck - two-minute recording script
 
-Record the real notebook/app, not a mock-up. Run all cells before recording; the input app opens automatically in Section 9. Use a real public batch or the notebook’s first eligible historical batch; label a historical replay explicitly. Do not claim newly pasted text has a known future outcome. Keep the final recording under two minutes and check its actual duration.
+Record the real live page and the real notebook, not a mock-up. Open
+https://adeviwon.github.io/hypecheck/live.html in a normal browser window, paste a real public post, and let the forecast render on camera. Keep the final recording under two minutes and check its actual duration.
+
+For the full neural-sentiment model, run the notebook; its Section 9 input app opens automatically after Run all.
 
 | Time | Show | Suggested narration |
 |---|---|---|
-| 0:00–0:15 | Notebook title and question | Memecoin posts often sound confident. We asked whether their wording and estimated sentiment actually help predict the next day’s direction. |
-| 0:15–0:40 | Select coin, paste real public batch/CSV, click Analyse batch | Users supply a batch about one coin. The app checks the input and runs a pretrained sentiment model, followed by our trained direction classifier. This is a user-provided sample, not all of X. |
-| 0:40–1:00 | Sentiment, forecast dates and evidence panels | These are different outputs: what the language sounds like, what the forecast model estimates, and whether our tests support trusting it. We do not estimate a tweet’s causal price impact. |
-| 1:00–1:15 | Word-contribution panel and saved failure | These words influenced this model. That does not make them economic laws. Our failure analysis shows bullish language can precede a falling price. |
-| 1:15–1:40 | Results table | We trained word-based logistic regression, changed class weights and tried character features. The balanced model scored 36.75 percent on later dates and 43.83 percent on unseen coins, below coin-only baselines of 51.18 and 55.84 percent. |
-| 1:40–1:55 | Limitations and next steps | We found no forecasting edge in this sparse archive. The dates were previously explored. Next we would freeze the method and test genuinely new posts prospectively. This is a prototype, not financial advice. |
+| 0:00-0:12 | Live page, empty box | Memecoin traders see confident posts all day. We tested whether that wording actually helps predict the next day's direction. |
+| 0:12-0:30 | Paste a real public post into **Paste tweet here**, click **Get forecast** | One box. I paste a public post and the trained model runs in my browser - nothing is uploaded, there is no server. |
+| 0:30-0:50 | The rendered result | It reads the coin from the cashtag, gives the estimated chance of an up day, the exact UTC window it is forecasting, and the words that moved the score. |
+| 0:50-1:05 | Coin-only baseline line and the evidence line | That is the honest part: the same pipeline without the wording scores higher than the model with it. 41 percent against 51 on later dates. So we tell users not to trust the number. |
+| 1:05-1:25 | Scroll to "What this page runs, exactly" | The page runs the wording and coin model in the browser. The full submitted model adds a frozen neural sentiment block, and that needs the Colab - it is all in the notebook with its error analysis. |
+| 1:25-1:45 | Notebook results table | We trained word TF-IDF logistic regression, changed class weights, and tried character features. Balanced model: 36.75 percent later dates, 43.83 percent unseen coins, against coin-only 51.18 and 55.84. |
+| 1:45-1:58 | Limitations cell | No forecasting edge in this sparse archive, the dates were examined before, and we estimate no causal effect. This is a prototype, not financial advice. |
 
-Upload the recording as unlisted on YouTube or viewable by anyone with the link on Drive. Test it logged out, including audio. A script is not a recorded video. If inference is slow, use a clearly labelled edit rather than suggesting it completed instantly.
+Do not claim the live forecast was "correct" - its outcome is in the future. Do not claim a trading edge. If inference is slow on the recording machine, use a clearly labelled edit rather than implying it was instant.
+
+Upload the recording as unlisted on YouTube or as a Drive link viewable by anyone. Test it logged out, including audio. A script is not a recorded video.
