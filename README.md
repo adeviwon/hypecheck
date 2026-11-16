@@ -1,5 +1,7 @@
 # HypeCheck — test the crowd
 
+**Live demo:** [paste a tweet and get the forecast](https://adeviwon.github.io/hypecheck/live.html) — the trained wording + coin model runs in your browser, no server, with its own held-out scores shown beside the forecast.
+
 Supply a batch of public X posts about one memecoin. HypeCheck separates estimated sample sentiment, next-day direction and the evidence for trusting that prediction. No claim of all-X coverage or causal price impact.
 
 [Current Colab](https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb)

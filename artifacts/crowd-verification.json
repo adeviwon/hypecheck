@@ -47,7 +47,13 @@
     "artifacts/crowd-predictions.csv": "7799ba2d017938d71721d2292332f5d9d69819bc86e8da385d3cde48f8e9a68b",
     "judge_tables.py": "90da7f2881172eb1a0701ad2ee0df7c92221c58d40adf8df6048077ca9d6701f",
     "test_judge_tables.py": "d72143a72278f6d05616380aba5b4af27bb4d9b10d7bbf3881170e0422645058",
-    "crowd-source.json": "34aa0883b9ff5f9cf31587d4064904712b7af77ea6488641883abae97fd06dab"
+    "crowd-source.json": "34aa0883b9ff5f9cf31587d4064904712b7af77ea6488641883abae97fd06dab",
+    "docs/live.js": "a502b749b02da028f5f68d775bbfdfdd7d39a62a89c84226544e3ea5344d59ca",
+    "docs/live.html": "cffc4fa37d5b6f361edcf2eeaeea08625c0ca3f78f72e93fd68a1f5c3fc1ad3e",
+    "docs/live-model.json": "caa1a993844fb7415b49daa6dbfb0717f690cbb85096b70fc831a81c86e54e75",
+    "live_model.py": "816690e26ad9978409880960a506edeafdb256b7a5aac88d42675681a9f74116",
+    "build_live_page.py": "01e7e6eb1c8c9e50c513e811a4f6c53332de8b93d065ab7f8bb1d118f9615fb6",
+    "test_live_dom.mjs": "6f14d8ee5842ef52387f96f1dc067d70c9e315c825b23a5ed309111cdec48a8a"
   },
   "independent_review": {
     "verdict": "APPROVED",
@@ -65,5 +71,25 @@
     "plain_english_findings_after_experiments": true,
     "reference_comparisons_removed_except_credit": true,
     "verification": "Complete notebook rerun and full submission gate"
-  }
+  },
+  "live_page": {
+    "url": "https://adeviwon.github.io/hypecheck/live.html",
+    "runs": "Trained wording + coin pipeline in the browser; the frozen FinTwitBERT sentiment block is Colab-only and is disclosed on the page.",
+    "artifact": "docs/live-model.json",
+    "python_browser_parity_cases": 18,
+    "max_abs_probability_difference": 1.11e-16,
+    "tests": [
+      "node docs/live.js --self-test",
+      "node test_live_dom.mjs"
+    ],
+    "measured_accuracy": {
+      "later_time": 0.4121,
+      "unseen_coin_market": 0.5022,
+      "coin_only_later": 0.5118,
+      "coin_only_unseen": 0.5584
+    },
+    "page_prose_generated_from_artifact": true,
+    "submitted_model_unchanged": true
+  },
+  "live_page_verified_at_utc": "2026-11-16T00:50:34.328181+00:00"
 }
