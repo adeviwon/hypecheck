@@ -28,11 +28,10 @@ class IntegrationReadinessTests(unittest.TestCase):
                 self.assertNotIn('unsafe-inline', policies[0])
                 self.assertTrue(all(a.get('src') for t, a in parsed.elements if t == 'script'))
 
-    def test_archived_pages_point_to_current_input_demo(self):
-        for name in ['index.html', 'headlines.html']:
+    def test_replays_and_previous_forecast_url_link_to_current_demo(self):
+        for name in ['index.html', 'headlines.html', 'predict.html']:
             content = (ROOT / 'docs' / name).read_text()
-            self.assertIn('Archived', content)
-            self.assertTrue(any(t == 'a' and a.get('href') == 'predict.html' for t, a in Elements(content).elements))
+            self.assertTrue(any(t == 'a' and a.get('href') == 'https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb' for t, a in Elements(content).elements))
 
     def test_tables_are_named_keyboard_focusable_scroll_regions(self):
         content = (ROOT / 'docs/headlines.html').read_text()

@@ -1,26 +1,17 @@
-# HypeCheck — test the crowd
+# HypeCheck
 
-Supply a batch of public X posts about one memecoin. HypeCheck separates estimated sample sentiment, next-day direction and the evidence for trusting that prediction. No claim of all-X coverage or causal price impact.
+Can the wording and sentiment of public X posts improve next-day memecoin forecasts? In our retrospective tests, the coin-only baseline was more accurate on both later dates and coins excluded from training.
 
-[Current Colab](https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb)
+[Run in Colab](https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb) · [Read the technical write-up](WRITEUP.md)
 
-## What is actually trained
-Default word TF-IDF + logistic regression; then the same features with balanced class weights; then a character-pattern alternative. Aggregate pinned FinTwitBERT sentiment and coin identity stay fixed between comparisons. The classifiers train on actual subsequent market outcomes, not model guesses. No transformer fine-tuning is claimed.
+## Try your own posts
 
-## Honest results
+- **One tweet in Colab.** Run the first two setup cells, paste the text into **Check a custom tweet**, select its coin, and run the cell. The first novel tweet may download FinTwitBERT.
+- **Several tweets in Colab.** Choose **Runtime → Run all**, then edit the list in Section 9 under **Enter tweets here**. Run that cell and the scoring cell directly below it. Each list entry is rated separately. The section also demonstrates a historical same-coin batch.
 
-| Model | Later-time accuracy | Unseen-coin accuracy |
-|---|---:|---:|
-| Model 1 | 36.09% | 49.03% |
-| Model 2 | 36.75% | 43.83% |
-| Character trial | 40.03% | 45.13% |
-| Coin only | 51.18% | 55.84% |
-| Always up | 50.39% | 44.16% |
-| Training majority | 49.61% | 55.84% |
-| Training prevalence | 49.61% | 55.84% |
-| Previous completed day | 47.24% | 55.84% |
+The target is whether the coin closes above its open on the next complete UTC day. These are experimental estimates. The earlier [five-coin replay](https://adeviwon.github.io/hypecheck/) and [13-coin sentiment replay](https://adeviwon.github.io/hypecheck/headlines.html) show historical forecasts from separate experiments.
 
-All accuracy is coin-day weighted. Training: 991 snapshots / 556 coin-days. Later-time test: 155 snapshots / 127 coin-days. Unseen-coin test: 99 snapshots / 77 coin-days. The word-balanced model fails the coin-only control in both tests. No demonstrated forecasting edge.
+## Reproduce
 
 ## Use
 **Try one tweet:** open Colab, run the two setup cells, then paste a tweet in **Check a custom tweet**. It uses the published model, so it works before training.
@@ -29,7 +20,7 @@ All accuracy is coin-day weighted. Training: 991 snapshots / 556 coin-days. Late
 
 Runtime → Run all. Section 5 visibly fits Model 1; Section 8 fits balanced Model 2 and the character trial. Section 9 runs a genuine historical batch and offers the optional multi-post/CSV app. New text runs the actual pinned pretrained sentiment network. Missing/invalid models or inputs block forecasting rather than fabricate scores.
 
-The primary target is the next complete UTC day after the snapshot cutoff, open to close, not the next 24 hours. Blank runtime cutoff means the actual submission time; old pasted text is not an automatic backtest.
+`verify_submission.py` reconstructs the historical sentiment cache, runs the Python and JavaScript tests, and checks notebook source hashes and regeneration. See the [write-up](WRITEUP.md) for training commands, data provenance, and model details.
 
 ## Reproduction
 Use Python 3.12 and the pinned requirements. `python prepare_verification.py` restores exact legacy cache inputs; `python sample_pipeline.py` trains the current batch experiment; `python verify_submission.py` verifies the submission. Source/data downloads are version-pinned and hash-checked. Server notebook execution is not an actual Colab runtime test.

@@ -1,5 +1,4 @@
 """Verify the current study, readable notebook and preserved security gates."""
-import ast
 import hashlib
 import json
 from pathlib import Path
@@ -25,13 +24,10 @@ def digest(path):
 
 prepare()
 
-run([sys.executable, '-m', 'unittest', '-v', 'test_pipeline.py', 'test_web.py',
-     'test_headline_study.py', 'test_headline_artifacts.py', 'test_headline_http.py',
-     'test_prepare_verification.py', 'test_integration_readiness.py', 'test_expanded_inputs.py', 'test_colab_setup.py', 'test_notebook_readability.py','test_tweet_forecast.py','test_crowd_snapshot.py','test_sample_pipeline.py','test_tweet_demo.py','test_crowd_app.py','test_judge_tables.py'])
+run([sys.executable, '-m', 'unittest', 'discover', '-v'])
 run(['node', 'docs/app.js', '--self-test'])
 run(['node', 'test_dom.mjs'])
 run(['node', 'test_headline_dom.cjs'])
-run(['node', 'test_tweet_ui.cjs'])
 nb = json.loads((ROOT / 'HypeCheck.ipynb').read_text())
 code = [cell for cell in nb['cells'] if cell['cell_type'] == 'code' and ''.join(cell['source']).strip()]
 metadata = nb['metadata']['hypecheck']
@@ -53,9 +49,9 @@ for name, expected in metadata['bootstrap_sha256'].items():
 assert any("model1.fit(X_train,train.actual_up" in "".join(c["source"]) for c in code)
 assert any("model2.fit(X_train,train.actual_up" in "".join(c["source"]) for c in code)
 assert not any("EMBEDDED_INPUTS =" in "".join(c["source"]) or "SOURCES =" in "".join(c["source"]) for c in code)
-paths = [ROOT / name for name in ['HypeCheck.ipynb', 'README.md', 'requirements.lock.txt', 'docs/headline-predictions.json']]
+paths = [ROOT / name for name in ['HypeCheck.ipynb', 'README.md', 'WRITEUP.md', 'requirements.lock.txt', 'docs/headline-predictions.json']]
 before = {path.name: digest(path) for path in paths}
-run([sys.executable, 'make_deliverables.py'])
-run([sys.executable, 'make_deliverables.py'])
+run([sys.executable, 'build_headline_colab.py'])
+run([sys.executable, 'build_headline_colab.py'])
 assert before == {path.name: digest(path) for path in paths}, 'Generator changed delivered artifacts or lockfile'
 print('Submission gate passed: real rich outputs, all-source/input parity, verified compact loader and repeatable artifact generation.')
