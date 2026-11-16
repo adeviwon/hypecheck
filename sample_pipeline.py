@@ -102,6 +102,21 @@ def export(prep,model):
 
 def infer(saved,row,explain=False):
  z=saved["intercept"];reasons=[];other=[]
+ if not isinstance(z,(int,float)) or isinstance(z,bool) or not math.isfinite(z):raise ValueError("Invalid model intercept")
+ names=[b["name"] for b in saved["blocks"]]
+ if len(names)!=len(set(names)) or set(names) not in [{"coin"},{"text","numeric","coin"}]:raise ValueError("Invalid model feature blocks")
+ for b in saved["blocks"]:
+  coefficients=np.asarray(b["coefficient"])
+  if coefficients.ndim!=1 or coefficients.dtype.kind not in "fiu" or not np.isfinite(coefficients).all():raise ValueError("Invalid model coefficients")
+  if b["name"]=="coin":
+   if len(b["categories"])!=len(coefficients):raise ValueError("Invalid model coin categories")
+  elif b["name"]=="numeric":
+   means=np.asarray(b["mean"]);scales=np.asarray(b["scale"])
+   if b["features"]!=SOCIAL or means.shape!=coefficients.shape or scales.shape!=coefficients.shape or means.dtype.kind not in "fiu" or scales.dtype.kind not in "fiu" or not np.isfinite(means).all() or not np.isfinite(scales).all() or (scales<=0).any():raise ValueError("Invalid model numeric scaling")
+   if any(not isinstance(row[k],(int,float)) or not math.isfinite(row[k]) for k in SOCIAL):raise ValueError("Invalid numeric input features")
+  else:
+   idf=np.asarray(b["idf"])
+   if idf.shape!=coefficients.shape or idf.dtype.kind not in "fiu" or not np.isfinite(idf).all() or (idf<=0).any() or sorted(b["vocabulary"].values())!=list(range(len(coefficients))):raise ValueError("Invalid model text features")
  for b in saved["blocks"]:
   if b["name"]=="coin":
    v=b["coefficient"][b["categories"].index(row["coin"])] if row["coin"] in b["categories"] else 0
@@ -117,6 +132,7 @@ def infer(saved,row,explain=False):
    for i,value in values.items():
     contribution=value/norm*b["coefficient"][i];z+=contribution
     if reverse[i] not in ENGLISH_STOP_WORDS:reasons.append({"word":reverse[i],"logit_contribution":float(contribution)})
+ if not math.isfinite(z):raise ValueError("Non-finite model score; forecast blocked")
  p=1/(1+math.exp(-max(-700,min(700,z))))
  return {"probability_up":p,"direction":"UP" if p>=.5 else "DOWN / FLAT","toward_up":sorted([r for r in reasons if r["logit_contribution"]>0],key=lambda r:-r["logit_contribution"])[:5],"toward_down":sorted([r for r in reasons if r["logit_contribution"]<0],key=lambda r:r["logit_contribution"])[:5],"other_feature_contributions":other}
 

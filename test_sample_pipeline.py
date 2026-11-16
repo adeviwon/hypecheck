@@ -38,6 +38,23 @@ class SampleTests(unittest.TestCase):
   row=self.later.iloc[0].to_dict();r=infer(self.a["models"]["Model 2"],row)
   self.assertTrue(all(x["word"] in row["text"].lower() for x in r["toward_up"]+r["toward_down"]))
   self.assertTrue(0<r["probability_up"]<1)
+ def test_corrupt_model_or_features_block_forecasting(self):
+  import copy
+  row=self.later.iloc[0].to_dict()
+  for value in [float('nan'),float('inf'),-float('inf')]:
+   for field in ['intercept','coefficient','idf','mean','scale','feature']:
+    with self.subTest(field=field,value=value):
+     saved=copy.deepcopy(self.a['models']['Model 2']);features=dict(row)
+     if field=='intercept':saved[field]=value
+     elif field=='feature':features[SOCIAL[0]]=value
+     else:
+      block=next(b for b in saved['blocks'] if field in b);block[field][0]=value
+     with self.assertRaises(ValueError):infer(saved,features)
+  saved=copy.deepcopy(self.a['models']['Model 2'])
+  next(b for b in saved['blocks'] if b['name']=='numeric')['scale'][0]=0
+  with self.assertRaises(ValueError):infer(saved,row)
+  saved['blocks']=[]
+  with self.assertRaises(ValueError):infer(saved,row)
  def test_invalid_sentiment_is_not_silently_faked(self):
   with self.assertRaises(ValueError):batch_features(["Example public text"],[{"bullish":2,"bearish":0,"neutral":0}],"DOGE")
  def test_metrics_are_reproduced_from_real_ledger(self):
