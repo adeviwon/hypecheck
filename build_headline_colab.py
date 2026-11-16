@@ -13,15 +13,15 @@ md("""# HypeCheck — test the crowd, not just a tweet
 **Veritas AI International High School Hackathon 2026 · AI + Finance**
 **Team:** Nathaniel Wong · Aaden Yick · Alastair Chu — Malvern College Hong Kong
 
-**Our user:** a trader who sees many public posts about one memecoin and wonders whether the wording and crowd sentiment deserve forecasting trust. **Input:** a batch of public posts. **Output:** estimated sample sentiment, a next-day direction estimate, and the evidence against simple baselines.
+**Who this is for:** someone watching a memecoin who sees a pile of public posts and wonders whether the wording and the crowd mood deserve any trust. **What goes in:** a batch of public posts. **What comes back:** an estimate of the sample's mood, a guess at tomorrow's direction, and how that guess stacks up against some very dumb rules.
 
-**Bottom line:** this experiment does not demonstrate a forecasting edge. We report that rather than turn a weak model into trading advice.
+**Bottom line:** the posts did not earn that trust in this experiment. We say it out loud instead of dressing a weak model up as trading advice.
 
-**Runtime → Run all.** Section 5 visibly trains Model 1; Section 8 tests balanced training and character-based wording features. Section 9 runs the trained batch forecast and offers an optional interactive app. Source setup is collapsed; data loading stays short.
+**Runtime → Run all.** Section 5 visibly trains Model 1; Section 8 tests balanced training and character-based wording features. Section 9 runs the trained batch forecast and offers an optional interactive app. The source setup is collapsed; data loading stays short.
 
-**Our investigation:** inspect real posts → establish simple baselines → train a word-based model → examine its mistakes → test later dates and new coins → test balanced training and character features → explain the predictions and findings. All price outcomes are historical market observations.
+**Where we go:** look at real posts → set some simple baselines → train a word-based model → poke at its mistakes → try later dates and new coins → try balanced training and character features → explain the predictions and what we found. Every price outcome is a real historical market observation.
 
-*This project is a prototype and is not financial advice. No complete or live X feed, causal impact or trading skill is claimed. This reused archive is exploratory, not independent confirmation.*
+*Prototype only, not financial advice. No complete or live X feed, no causal impact and no trading skill is claimed. This archive was picked over before, so it is exploratory and not independent confirmation.*
 """)
 code("""#@title Automatic environment setup
 import sys,subprocess,json,hashlib,urllib.request,contextlib,io
@@ -50,13 +50,13 @@ print("Pinned sources and actual market inputs verified; no downloaded forecasts
 """
 code(setup,True)
 md("""## 1. Load the data
-Real original public X posts and actual daily Binance prices. Frozen FinTwitBERT estimates language sentiment; next-day labels come from the **actual market**, not the sentiment model. The downstream forecast models are trained during this run. Transformers are **not fine-tuned**.
+Real public X posts, real daily Binance prices. Frozen FinTwitBERT estimates the language sentiment; the next-day labels come from the **actual market**, not from the sentiment model. The forecast models downstream get trained during this run. The transformers are **not fine-tuned**.
 """)
 code("""frame,train,later,unseen=dataset()
 print(f"Training: {len(train):,} snapshots; later-time test: {len(later):,}; unseen-coin test: {len(unseen):,}.")
 """)
 md("""## 2. Look at the data first
-We inspect real posts and their actual later market outcomes before fitting. Each row is a same-coin batch observed by a particular UTC cutoff, using the preceding 24 hours. Several snapshots can share one coin-day outcome, so each coin-day gets total weight one. Sentiment describes this supplied archive sample, not all of X. **Bullish language** and **bearish language** are average AI language scores, displayed as percentages—not the probability that the coin will rise or fall. **Actual next-day result** is measured from market prices, not predicted.
+Before fitting anything, we look at real posts and what the market actually did afterwards. Each row is one batch of same-coin posts, seen at a particular UTC cutoff and covering the preceding 24 hours. Several snapshots can share one coin-day outcome, so each coin-day counts with total weight one. Sentiment describes this supplied archive sample, not all of X. **Bullish language** and **bearish language** are average AI language scores shown as percentages — they are not the probability that the coin will move up or down. **Actual next-day result** is measured from market prices, not predicted.
 """)
 code("""examples=examples_table(train)
 table(examples.drop(columns=["Example wording"]),"Post batches, language scores and actual next-day results")
@@ -67,9 +67,9 @@ print("Established training coins:",BASE_COINS)
 print("Excluded from supervised training:",NEW_COINS)
 """)
 md("""## 3. Split into training and test sets
-We run a stratified random 80/20 split with random_state=42 as a **diagnostic** on historical training data, but do not use its score as forecasting evidence: related snapshots and market dates can appear on both sides.
+We also run a stratified random 80/20 split with random_state=42, but only as a **diagnostic** on historical training data. We never treat its score as forecasting evidence, because related snapshots and market dates can land on both sides.
 
-The primary financial test instead uses earlier calendar dates for training and the final 20% of the price calendar for testing, with a purge. The later-time set uses established coins; the other set uses coins excluded from training. Multi-coin posts mentioning excluded assets are removed from the established training cohort. This is new-to-training data, **not independent confirmation**: the archive was explored before.
+The real financial test is different: earlier calendar dates train, the final 20% of the price calendar tests, with a purge in between. One set holds established coins; the other holds coins we kept out of training entirely. Multi-coin posts that mention an excluded asset get dropped from the established training cohort. This data is new to training, but it is **not independent confirmation** — the archive was explored before.
 """)
 code("""from sklearn.model_selection import train_test_split
 random_train,random_test=train_test_split(train,test_size=.2,stratify=train.actual_up,random_state=42)
@@ -78,9 +78,9 @@ assert train.date.max()+pd.Timedelta(days=1)<min(later.date.min(),unseen.date.mi
 print("Random diagnostic shared dates:",len(set(random_train.date)&set(random_test.date)))
 """)
 md("""## 4. Baselines: simple rules before AI
-We compare the AI models with always-up, training majority/prevalence, coin-only and the previous **completed** UTC-day direction at the snapshot cutoff. No unfinished-day close is allowed.
+We pit the AI models against always-up, training majority/prevalence, coin-only, and copying the previous **completed** UTC-day direction at the snapshot cutoff. No half-finished day sneaks in.
 
-Report accuracy, precision and recall for UP, confusion matrices and **Brier error** (probability error; lower is better). **Correct directions** means how often the forecast matched the market. **UP calls that were right** is precision; **rising days caught** is recall. These answer different questions. Methods use identical rows and coin-day weights. A high accuracy alone does not establish forecasting value.
+We report accuracy, precision and recall for UP, confusion matrices, and **Brier error** (how far off the probabilities are; lower is better). **Correct directions** is how often the forecast matched the market. **UP calls that were right** is precision; **rising days caught** is recall. Those two answer different questions. Every method sees the same rows and the same coin-day weights. High accuracy on its own proves nothing about forecasting value.
 """)
 code("""from sklearn.linear_model import LogisticRegression
 coin_encoder=encoder(coin_only=True)
@@ -92,7 +92,7 @@ for label,part in [("Later dates",later),("Unseen coins",unseen)]:
     display(Markdown("**Baseline finding:** "+label+" — the coin-only rule was correct "+format(scores["Coin only"]["accuracy"],".2%")+" of the time. The post-based model needs to improve on this, not just produce convincing-looking probabilities."))
 """)
 md("""## 5. Model 1: TF-IDF + logistic regression
-We turn word usage into numerical features with TF-IDF, then fit logistic regression to actual price direction. Our fixed extra features represent estimated batch sentiment and coin identity; they remain unchanged between Model 1 and balanced Model 2. TF-IDF and scaling fit only training data. The label is whether the next complete UTC day closes above its open.
+TF-IDF turns word usage into numbers, then logistic regression learns the actual price direction. Our fixed extra features are the estimated batch sentiment and the coin identity, and they stay identical across Model 1 and balanced Model 2 so the comparison is fair. TF-IDF and scaling are fit on training data only. The label: does the next complete UTC day close above its open?
 """)
 code("""from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -109,7 +109,7 @@ table(confusion_table(score1["Model 1"]),"Where Model 1 was right or wrong; weig
 display(Markdown("**What this result means:** "+model_findings(score1)))
 """)
 md("""## 6. Where Model 1 goes wrong
-We inspect five actual held-out errors. **Missed a rise** means the model predicted no rise but the price rose. **Predicted a rise that did not happen** means it made a false UP call. A missed UP and a false-UP forecast are different mistakes. Neither has a universal financial cost: losses depend on returns, fees and execution. These are errors, not fabricated successful demonstrations.
+Here are five real held-out mistakes. **Missed a rise** means the model said no rise and the price rose anyway. **Predicted a rise that did not happen** means it cried UP and nothing happened. Those are different mistakes, and neither has a fixed financial cost — losses depend on returns, fees and execution. These are the errors as they happened, not a highlight reel of fake wins.
 """)
 code("""def inspect_errors(part,prep,model,title):
     p=model.predict_proba(prep.transform(part))[:,1]
@@ -129,9 +129,9 @@ code("""def inspect_errors(part,prep,model,title):
 inspect_errors(later,word_encoder,model1,"Model 1: later-time errors")
 """)
 md("""## 7. Our addition: later time and another coin market
-We test whether the model transfers to **later dates** and to a separate **new-coin cohort excluded from training**. We retain every eligible batch rather than inventing cases or selecting a class quota. Actual subsequent prices determine the outcomes.
+Does the model carry over to **later dates**, and to a separate **cohort of coins we kept out of training**? We keep every eligible batch — no invented cases, no picking a class quota. Real subsequent prices decide the outcomes.
 
-We inspect the top 12 learned word coefficients in each direction. These describe this fitted model, not economic laws or evidence that a word caused a price move.
+We also read off the top 12 learned word coefficients in each direction. They describe this fitted model. They are not economic laws, and they are not evidence that a word moved a price.
 """)
 code("""market_scores,_=evaluate(models,train,unseen)
 table(scores_table(market_scores),"Model 1 on coins excluded from training")
@@ -141,7 +141,7 @@ coef=model1.coef_[0][word_encoder.output_indices_["text"]]
 table(pd.DataFrame({"Words pushing the model toward a rise":words[np.argsort(coef)[-12:][::-1]],"Words pushing the model toward no rise":words[np.argsort(coef)[:12]]}),"Model 1: top word coefficients")
 """)
 md("""## 8. Improvement experiment: balanced class weights
-We change **only the class weighting**: class_weight=balanced. Keep the vocabulary, numeric features, training rows and target fixed. The purpose is to test class-imbalance behaviour, not assume that catching more UP days improves trading decisions. Report both tests again, whether results improve or worsen.
+We change **one thing only**: class_weight=balanced. Same vocabulary, same numeric features, same training rows, same target. This tests how the model behaves on imbalanced classes — it is not an assumption that catching more UP days makes for better trading decisions. We report both tests again, whether they got better or worse.
 """)
 code("""model2=LogisticRegression(max_iter=1000,class_weight="balanced")
 model2.fit(X_train,train.actual_up,sample_weight=weight(train))
@@ -153,7 +153,7 @@ for label,part in [("Later dates",later),("Unseen coins",unseen)]:
     display(Markdown("**What Model 2 achieved:** "+model_findings(result,"Model 2")))
 """)
 md("""### One alternative we tried: character n-grams
-We test short character patterns instead of whole words: char_wb, ngrams (2,5), sublinear TF, balanced logistic regression and C=10. Keep the same sentiment and coin features. Show all results. The word-balanced model is predeclared as the readable demo, **not selected because it wins on test accuracy**. Looking at these reused tests cannot establish an independent improvement.
+Instead of whole words we try short character patterns: char_wb, ngrams (2,5), sublinear TF, balanced logistic regression and C=10. Same sentiment and coin features. All results shown. The word-balanced model is declared the readable demo up front, **not chosen because it wins on test accuracy**. Eyeballing these reused tests cannot establish an independent improvement.
 """)
 code("""cvec=TfidfVectorizer(analyzer="char_wb",ngram_range=(2,5),sublinear_tf=True)
 char_encoder=ColumnTransformer([("text",cvec,"text"),("numeric",StandardScaler(),SOCIAL),("coin",OneHotEncoder(handle_unknown="ignore"),["coin"])])
@@ -174,12 +174,12 @@ character_report=json.loads((ROOT/"docs/crowd-report.json").read_text())
 character_text=[]
 for key,label in TEST_NAMES.items():
     values=character_report["tests"][key];char=values["Character trial"];word=values["Model 2"]
-    character_text.append(label+": character features were correct "+format(char["accuracy"],".2%")+" of the time versus "+format(word["accuracy"],".2%")+" for the balanced word model. Their probability error was "+format(char["brier"],".4f")+" versus "+format(word["brier"],".4f")+" (lower is better).")
-md("### What the character alternative tells us\n"+" ".join(character_text)+" A more complicated text representation did not solve the forecasting problem or establish trading value.")
+    character_text.append(label+": character features got the direction right "+format(char["accuracy"],".2%")+" of the time, against "+format(word["accuracy"],".2%")+" for the balanced word model. Probability error was "+format(char["brier"],".4f")+" versus "+format(word["brier"],".4f")+" (lower is better).")
+md("### What the character alternative tells us\n"+" ".join(character_text)+" A fancier text representation did not crack the forecasting problem, and it did not establish trading value.")
 md("""## 9. The demo: explain a batch forecast
-For each word, we multiply its TF-IDF value by its learned coefficient to explain how it influenced this model. Sentiment and coin contributions are kept separate. The first demonstration uses the **first eligible held-out historical snapshot**, transported as quoted CSV to preserve blank lines inside original posts. It is an illustration, not an independent test.
+For each word we multiply its TF-IDF value by its learned coefficient, which shows how much that word pushed this particular model. Sentiment and coin contributions get kept separate. The first demonstration uses the **first eligible held-out historical snapshot**, carried in as quoted CSV so blank lines inside original posts survive. It is an illustration, not an independent test.
 
-The three panels distinguish estimated language sentiment, a price-direction model estimate, and whether the evidence supports trusting it. No causal price-impact estimate or guaranteed return is shown.
+The three panels separate three different things: estimated language sentiment, the price-direction model's estimate, and whether the evidence actually supports trusting it. No causal price-impact estimate, no guaranteed return.
 """)
 code("""from crowd_app import panels,build_app
 example=later.iloc[0]
@@ -189,11 +189,11 @@ print("Historical reveal — actual next-day direction:","UP" if example.actual_
 table(pd.DataFrame(result["toward_up"]+result["toward_down"]).rename(columns={"word":"Word","logit_contribution":"Contribution to this model score"}),"Actual word × TF-IDF contributions (logit units)")
 """)
 md("""### Enter tweets here
-The list below holds **40 real public posts that were held out of training** — 20 from later dates, and 20 about coins the model never saw. The model rates every one of them, and because their next-day outcomes are already known, the table can show what it got right.
+The list below holds **40 real public posts that were held out of training** — 20 from later dates, and 20 about coins the model had never seen. The model rates every one of them, and since their next-day outcomes are already known, the table can show what it got right.
 
-**Replace the list with your own posts and the same block rates them.** Your own posts are rated but not scored: their outcome has not happened yet, so there is nothing honest to mark against.
+**Swap in your own posts and the same block rates them.** Your own posts get rated but not scored: their outcome hasn't happened yet, so there is nothing honest to mark them against.
 
-Each entry is one post as a quoted string. A post may start with `TICKER | ` to set its coin; otherwise a cashtag in the text, or the `COIN` setting, is used. You can also delete the list and assign one triple-quoted block instead, with a blank line between posts.
+Each entry is one post as a quoted string. A post can start with `TICKER | ` to set its coin; otherwise a cashtag in the text, or the `COIN` setting, is used. You can also delete the list and assign one triple-quoted block instead, with a blank line between posts.
 """)
 code("""#@title Enter tweets here
 TWEETS = [
@@ -211,7 +211,7 @@ else:
     print("Set RATE=True to rate the posts in TWEETS.")
 """)
 md("""## 10. Results summary
-Compare the same rows before and after balanced weights, plus the character alternative. UP precision/recall expose the tradeoff that accuracy alone hides. Full confusion matrices and test support are saved in the report. The chart uses a full 0–100% axis.
+Same rows, before and after balanced weights, plus the character alternative. UP precision and recall expose the tradeoff that accuracy hides. Full confusion matrices and test support live in the report. The chart uses the full 0–100% axis.
 """)
 code("""table(results_table(report),"Complete measured comparison")
 accuracy_chart({"primary_model":"Model 2","metrics":report["tests"]["later_time"]},["Model 1","Model 2","Character trial","Coin only","Training majority"])
@@ -220,12 +220,12 @@ print("Paired date-block accuracy differences vs coin-only:",report["paired_accu
 md("### Our findings, in plain English\n"+overall_findings(json.loads((ROOT/"docs/crowd-report.json").read_text())))
 md("""## 11. Limitations and next steps
 - This is a sparse archive, not every public post about a coin. Estimated sample sentiment is not validated full-population sentiment.
-- The later-time and unseen-coin experiments use actual prices but reused dates; they are exploratory, not independent confirmation. Small per-coin samples limit conclusions.
-- Balanced weights may increase UP recall while worsening false alarms or accuracy. They do not create trading skill. The character trial can overfit and gives less readable fragments.
-- Probabilities are not independently calibrated. No profitability, fees/slippage, causal effect or useful return-magnitude forecast is established. Do not invert a losing model after seeing test labels and call that a new validated strategy.
-- Next: gather a genuinely new timestamped public sample, freeze this protocol and evaluate prospectively; test whether users understand the evidence warnings.
+- The later-time and unseen-coin experiments use real prices but reused dates, so they are exploratory, **not independent confirmation**. Small per-coin samples limit what we can conclude.
+- Balanced weights may catch more UP days while producing more false alarms or worse accuracy. They do not create trading skill. The character trial can overfit and hands you less readable fragments.
+- The probabilities are not independently calibrated. We established no profitability, no fees/slippage, no causal effect and no useful return-magnitude forecast. And do not flip a losing model after peeking at test labels and call that a new validated strategy.
+- Next: gather a genuinely new timestamped public sample, freeze this protocol and evaluate it prospectively; also test whether users actually understand the evidence warnings.
 
-**Investor boundary:** this prototype does not justify trading because a batch sounds bullish or the model predicts UP. Its useful result is demonstrating how apparent text-based confidence can fail a fair future-market test.
+**Investor boundary:** this prototype does not justify trading just because a batch sounds bullish or the model says UP. Its useful result is showing how convincing-looking text confidence can fall apart on a fair future-market test.
 """)
 code("""for filename in ["test_crowd_snapshot.py","test_sample_pipeline.py","test_tweet_demo.py","test_crowd_app.py","test_judge_tables.py"]:
     completed=subprocess.run([sys.executable,filename],text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
@@ -234,11 +234,11 @@ print("Saved safe JSON models and genuine outputs. Actual Google Colab runtime:"
 """)
 md("""## Sources
 - [financial-tweets-crypto](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto), pinned revision and source hash in pipeline.py.
-- [FinTwitBERT sentiment](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), pinned safe weights; scores are model estimates, not human gold labels.
-- Actual Binance spot daily bars, frozen and hash-checked. [Market-data documentation](https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#klinecandlestick-data).
+- [FinTwitBERT sentiment](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), pinned safe weights; treat the scores as model estimates, not human gold labels.
+- Real Binance spot daily bars, frozen and hash-checked. [Market-data documentation](https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#klinecandlestick-data).
 - scikit-learn, PyTorch, Transformers, safetensors, NumPy, pandas, PyArrow, IPython and ipywidgets.
 - Veritas AI participant reference notebook and Finance brief, credited as methodological sources.
-- Hermes Agent/OpenAI coding assistance. The team must understand and explain the work. Third-party data/model terms remain applicable.
+- Hermes Agent/OpenAI coding assistance. The team has to understand and explain the work. Third-party data/model terms still apply.
 
 *This project is a prototype and is not financial advice.*
 """)

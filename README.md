@@ -23,9 +23,7 @@ Default word TF-IDF + logistic regression; then the same features with balanced 
 All accuracy is coin-day weighted. Training: 991 snapshots / 556 coin-days. Later-time test: 155 snapshots / 127 coin-days. Unseen-coin test: 99 snapshots / 77 coin-days. The word-balanced model fails the coin-only control in both tests. No demonstrated forecasting edge.
 
 ## Use
-**Try one tweet:** Open Colab, run the two setup cells, then choose a coin and paste the tweet in **Check a custom tweet**. Run that cell for the forecast. Edit the text and rerun it to try another tweet. This uses the published Model 2; the first tweet may trigger a FinTwitBERT download.
-
-**Run the full study or check a batch:** Runtime → Run all. Section 5 visibly fits Model 1; Section 8 fits balanced Model 2 and the character trial. Section 9 runs a genuine historical batch and opens the multi-post/CSV app automatically. In Section 9, choose a coin, paste your own public posts separated by blank lines (or select CSV text), leave UTC cutoff blank and click Analyse batch. The first new-text run downloads the pinned sentiment network; allow that download to finish. No API key or paid service is required. New text runs the actual pinned pretrained sentiment network. Missing/invalid models or inputs block forecasting rather than fabricate scores.
+Runtime → Run all. Section 5 visibly fits Model 1; Section 8 fits balanced Model 2 and the character trial. Section 9 runs a genuine historical batch and offers the optional multi-post/CSV app. New text runs the actual pinned pretrained sentiment network. Missing/invalid models or inputs block forecasting rather than fabricate scores.
 
 The primary target is the next complete UTC day after the snapshot cutoff, open to close, not the next 24 hours. Blank runtime cutoff means the actual submission time; old pasted text is not an automatic backtest.
 
@@ -33,7 +31,7 @@ The primary target is the next complete UTC day after the snapshot cutoff, open 
 Use Python 3.12 and the pinned requirements. `python prepare_verification.py` restores exact legacy cache inputs; `python sample_pipeline.py` trains the current batch experiment; `python verify_submission.py` verifies the submission. Source/data downloads are version-pinned and hash-checked. Server notebook execution is not an actual Colab runtime test.
 
 ## Verification
-Current evidence: [artifacts/crowd-verification.json](artifacts/crowd-verification.json); judge instructions and limitations: [JUDGE_READINESS.md](JUDGE_READINESS.md). The full gate, empty-directory notebook, simulated Colab dependency path and genuinely new-text inference were exercised. Corrupt-model rejection and default-open input have regression checks. Actual Google Colab infrastructure remains unverified. Older submission-verification.json is explicitly archived.
+Current evidence: [artifacts/crowd-verification.json](artifacts/crowd-verification.json): recorded cell counts, test counts and genuine execution evidence. The model implementation received independent review; the presentation-only changes were rerun and regression-tested. Older submission-verification.json is explicitly archived.
 
 ## Sources and limits
 [Public post archive](https://huggingface.co/datasets/StephanAkkerman/financial-tweets-crypto), [FinTwitBERT](https://huggingface.co/StephanAkkerman/FinTwitBERT-sentiment), actual Binance market bars, scikit-learn and dependencies; Veritas AI participant reference notebook and Finance brief; Hermes Agent/OpenAI coding assistance. Sparse, biased archive and previously explored test dates mean exploratory evidence, not independent confirmation. No complete live feed, independently calibrated probabilities, causal effect or trading recommendation.
