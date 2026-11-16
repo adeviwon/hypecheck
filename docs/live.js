@@ -17,8 +17,8 @@ function linearBlocks(artifact, text, coin) {
   const terms = [];
   let norm = 0;
   for (const [term, count] of counts) {
+    if (!Object.prototype.hasOwnProperty.call(textBlock.vocabulary, term)) continue;
     const index = textBlock.vocabulary[term];
-    if (index === undefined) continue;
     const value = count * textBlock.idf[index];
     terms.push({ term, index, value });
     norm += value * value;
@@ -45,12 +45,14 @@ function baselineLogit(artifact, coin) {
 
 function score(artifact, text, coin) {
   const { z, contributions, coinKnown } = linearBlocks(artifact, text, coin);
+  const baseline = baselineLogit(artifact, coin);
+  if (!Number.isFinite(z) || !Number.isFinite(baseline)) throw new Error("Invalid model score; forecast blocked.");
   const probability = 1 / (1 + Math.exp(-z));
   return {
     probability_up: probability,
     direction: probability >= 0.5 ? "UP" : "DOWN / FLAT",
     coin_known: coinKnown,
-    coin_baseline_probability_up: 1 / (1 + Math.exp(-baselineLogit(artifact, coin))),
+    coin_baseline_probability_up: 1 / (1 + Math.exp(-baseline)),
     contributions,
     toward_up: contributions.filter(c => c.contribution > 0).slice(0, 6),
     toward_down: contributions.filter(c => c.contribution < 0).slice(-6).reverse(),

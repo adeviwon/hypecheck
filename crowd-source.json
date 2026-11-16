@@ -1,12 +1,12 @@
 {
-  "revision": "de1b2180a582d04a8d43715e01c971596929778b",
+  "revision": "77c33a0f3d81d05c74bc448085adab843be56fae",
   "files": {
-    "sample_pipeline.py": "268751cd13f2c47017a96cfb24e5d26ddedd2318748596823bf4be880bdd9605",
+    "sample_pipeline.py": "ce5f257a3be06365f21a8587a6206ebc20f387449ff6489c664fdf9ec3ad1cd6",
     "crowd_snapshot.py": "a32105c5fff454b15619a718a35997da441580866b0054e57e10861115cb134f",
     "crowd_app.py": "9b0c527cd800ae3caee7275c0a63fb72c7284d3a3bacc40afdb680e6b40ce081",
-    "test_sample_pipeline.py": "ac9c345ed02a4803d428119640b915b5ba410c3ddeb23a3dba398d570ee4cd4a",
+    "test_sample_pipeline.py": "8a807fdc290380669780665a55dd9b79eb5604bc4dbc67f55f3f5d887af0e7c3",
     "test_crowd_snapshot.py": "79cb9c9983d72e729bf069dc6d253125778d9e2e60ba774499c73ccf7caddb4d",
-    "test_crowd_app.py": "ccf94fbc82dff1cd9194eb945db78b8498e433cdb8f93696339a77ce6bb177f1",
+    "test_crowd_app.py": "6a050e88d5fb010db242a5f934c6b15c5a674f45ad7485503902bd59785fee02",
     "judge_tables.py": "90da7f2881172eb1a0701ad2ee0df7c92221c58d40adf8df6048077ca9d6701f",
     "test_judge_tables.py": "d72143a72278f6d05616380aba5b4af27bb4d9b10d7bbf3881170e0422645058"
   }

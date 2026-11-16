@@ -13,10 +13,10 @@
 **Write-up:** [WRITEUP.md](WRITEUP.md)
 **Recording script:** [DEMO_SCRIPT.md](DEMO_SCRIPT.md)
 
-The pinned code link freezes the verified notebook and model; the final packet refines documentation only. Open Runtime → Run all; in Section 9 set RUN_APP=True to enter posts. Existing Drive copies do not update automatically.
+Use the current notebook linked above, not an older pinned notebook or an existing Drive copy. Open Runtime → Run all; the Section 9 input app opens automatically. Choose a coin, paste public posts or CSV, leave UTC cutoff blank, and click Analyse batch. No API key is required; first-time fresh text downloads the pinned sentiment network. Existing Drive copies do not update automatically.
 
 ## Before pressing Submit
-- [ ] Open the pinned notebook in Google Colab and run all in the actual Colab runtime. Server execution is verified; this runtime/install path is not yet verified.
+- [ ] Open the current notebook in Google Colab and run all in the actual Colab runtime. Server execution is verified; this runtime/install path is not yet verified.
 - [ ] Record and upload the required demo video, maximum two minutes, showing the live page. Put its accessible URL in the form. No completed recording is included in this packet.
 - [ ] Confirm every team member’s exact name, registration email, school and eligibility privately in the official form. Do not publish emails in the repository.
 - [ ] Confirm contributions, build-window compliance and that all teammates understand the code and AI assistance.

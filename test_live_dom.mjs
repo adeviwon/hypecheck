@@ -79,6 +79,17 @@ const heldOut = render(output);
 check(heldOut.includes("held out of training"), "a coin excluded from training was not flagged");
 check(heldOut.includes("wording only"), "a held-out coin did not fall back to wording only");
 
+// Corrupt model data must clear any earlier forecast, never render false certainty.
+const intercept = model.model.intercept;
+model.model.intercept = NaN;
+button.listeners.click();
+check(render(output) === "", "a corrupt model left a forecast visible");
+check(render(status).includes("forecast blocked"), "a corrupt model was not rejected");
+model.model.intercept = intercept;
+elements.get("live-text").value = "__proto__ constructor DOGE public wording";
+button.listeners.click();
+check(!render(output).includes("NaN"), "inherited object keys corrupted the forecast");
+
 // Bad input must block the forecast instead of producing a number.
 elements.get("live-text").value = "hi";
 button.listeners.click();

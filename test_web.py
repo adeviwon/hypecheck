@@ -63,7 +63,7 @@ class WebChecks(unittest.TestCase):
                 self.assertEqual(error.exception.code, 405)
 
     def test_head_and_local_assets(self):
-        for path in ["/", "/app.js", "/style.css", "/favicon.svg"]:
+        for path in ["/", "/app.js", "/style.css", "/favicon.svg", "/live.html", "/live.js", "/live.css", "/live-model.json"]:
             with urlopen(Request(self.base + path, method="HEAD"), timeout=5) as response:
                 self.assertEqual(response.status, 200)
                 self.assertGreater(int(response.headers["Content-Length"]), 0)

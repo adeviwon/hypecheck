@@ -3,6 +3,8 @@
 Record the real live page and the real notebook, not a mock-up. Open
 https://adeviwon.github.io/hypecheck/live.html in a normal browser window, paste a real public post, and let the forecast render on camera. Keep the final recording under two minutes and check its actual duration.
 
+For the full neural-sentiment model, run the notebook; its Section 9 input app opens automatically after Run all.
+
 | Time | Show | Suggested narration |
 |---|---|---|
 | 0:00-0:12 | Live page, empty box | Memecoin traders see confident posts all day. We tested whether that wording actually helps predict the next day's direction. |

@@ -2,10 +2,10 @@
   "status": "passed",
   "execution": "Empty-directory server run; not actual Google Colab",
   "code_cells_with_outputs": 15,
-  "python_tests": 104,
+  "python_tests": 107,
   "rich_tables": 25,
   "accuracy_charts": 1,
-  "clean_report_exact_match": true,
+  "clean_report_exact_match": false,
   "new_text_neural_inference": "exercised actual pinned FinTwitBERT on new text",
   "widget_csv_training_parity": "passed with exact probability match",
   "error_analysis": "actual outcome, probability, word reasons and grouped failure patterns for both models",
@@ -38,8 +38,8 @@
     }
   },
   "source_hashes": {
-    "HypeCheck.ipynb": "8e80338bef1ec3afe4dd0c7e9d19c8d3c36ca1b9c1461e83ae8b5784f5312b17",
-    "sample_pipeline.py": "268751cd13f2c47017a96cfb24e5d26ddedd2318748596823bf4be880bdd9605",
+    "HypeCheck.ipynb": "1009126a019da34a45de959aad6bc43d5402055bf2e40066c3ddbc5db9724dfc",
+    "sample_pipeline.py": "ce5f257a3be06365f21a8587a6206ebc20f387449ff6489c664fdf9ec3ad1cd6",
     "crowd_snapshot.py": "a32105c5fff454b15619a718a35997da441580866b0054e57e10861115cb134f",
     "crowd_app.py": "9b0c527cd800ae3caee7275c0a63fb72c7284d3a3bacc40afdb680e6b40ce081",
     "docs/crowd-report.json": "a5f92c7d016c09b8361085a6eea298a24fbbc5c5910e570137b6a718f6ff820a",
@@ -47,22 +47,21 @@
     "artifacts/crowd-predictions.csv": "7799ba2d017938d71721d2292332f5d9d69819bc86e8da385d3cde48f8e9a68b",
     "judge_tables.py": "90da7f2881172eb1a0701ad2ee0df7c92221c58d40adf8df6048077ca9d6701f",
     "test_judge_tables.py": "d72143a72278f6d05616380aba5b4af27bb4d9b10d7bbf3881170e0422645058",
-    "crowd-source.json": "34aa0883b9ff5f9cf31587d4064904712b7af77ea6488641883abae97fd06dab",
-    "docs/live.js": "a502b749b02da028f5f68d775bbfdfdd7d39a62a89c84226544e3ea5344d59ca",
+    "crowd-source.json": "f07fe6a9d0b77ef5b4d8f3e25e2d4aeb00cb9d7149d0c2ed7e3570419bfce8cc",
+    "docs/live.js": "46e8d8b56e52915c4d0c648f380b9f87c5339798b9c7e0856ea6101a898b8145",
     "docs/live.html": "cffc4fa37d5b6f361edcf2eeaeea08625c0ca3f78f72e93fd68a1f5c3fc1ad3e",
     "docs/live-model.json": "caa1a993844fb7415b49daa6dbfb0717f690cbb85096b70fc831a81c86e54e75",
     "live_model.py": "816690e26ad9978409880960a506edeafdb256b7a5aac88d42675681a9f74116",
     "build_live_page.py": "01e7e6eb1c8c9e50c513e811a4f6c53332de8b93d065ab7f8bb1d118f9615fb6",
-    "test_live_dom.mjs": "6f14d8ee5842ef52387f96f1dc067d70c9e315c825b23a5ed309111cdec48a8a"
+    "test_live_dom.mjs": "0544acf0f0adcb96cf4f1e4d9638b8459fdd155c87814c459edadd75f57747ee"
   },
   "independent_review": {
-    "verdict": "APPROVED",
-    "spec_gap": "CLOSED: executed actual-error examples, explanations and grouped failure analysis",
-    "scope": "Read-only implementation and notebook review; six pinned source/test hashes independently checked; seven readability tests independently passed",
-    "not_repeated": "Full training, full suite, new neural inference and actual Google Colab execution were not rerun by the reviewer",
-    "scope_note": "Approved model implementation is unchanged. Subsequent presentation-only refinements were verified by the current full test run, not a separate new independent review."
+    "scope": "Two read-only reviews of baseline e9b597c: ML reproduction and notebook usability.",
+    "finding": "Genuine ML reproduced; NaN intercept could create false certainty; app disabled by default; torch install assumed.",
+    "resolution": "Shared inference validation and regression tests; input app enabled by default; explicit torch fallback. Full suite rerun by parent.",
+    "limitation": "Final fixes not independently re-reviewed; actual Google Colab infrastructure not exercised."
   },
-  "execution_seconds": 94.59,
+  "execution_seconds": 226.09,
   "numeric_model_and_report_unchanged": true,
   "presentation": {
     "readable_dates_and_percentages": true,
@@ -89,7 +88,44 @@
       "coin_only_unseen": 0.5584
     },
     "page_prose_generated_from_artifact": true,
-    "submitted_model_unchanged": true
+    "submitted_model_unchanged": "Learned parameters unchanged; inference now rejects nonfinite/corrupt parameters."
   },
-  "live_page_verified_at_utc": "2026-11-16T00:50:34.328181+00:00"
+  "live_page_verified_at_utc": "2026-11-16T00:50:34.328181+00:00",
+  "clean_report_comparison": "Model/report JSON values and all prediction ledger values exactly match both empty-directory runs. JSON key and CSV column serialization order differ; no byte-identical report claim.",
+  "judge_readiness": {
+    "technical_verdict": "Ready to demonstrate; actual Google Colab acceptance and recording remain user checks.",
+    "full_model_input_app_default_enabled": true,
+    "corrupt_model_blocks_forecast": true,
+    "stale_result_cleared_on_failure": true,
+    "empty_directory_server_run": "15/15 code cells passed",
+    "simulated_colab": "Fresh Python 3.12 environment initially without torch; dependency branch and 15/15 code cells passed. google.colab sentinel is simulation, NOT actual Google Colab.",
+    "actual_google_colab": "NOT VERIFIED",
+    "fresh_text_widget": "Uncached synthetic test wording ran actual pinned FinTwitBERT then Model 2 through the widget callback. Blank input cleared the output.",
+    "browser_local": {
+      "base_url": "http://127.0.0.1:18766",
+      "status": "passed",
+      "runs": [
+        {
+          "width": 1280,
+          "forecast": "ESTIMATED CHANCE THE NEXT UTC DAY CLOSES UP\n\n45.4% \u2014 DOWN / FLAT\n\nFORECAST DAY\n\n2026-11-17 00:00 UTC to 2026-11-18 00:00 UTC (end exclusive)\n\nCOIN-ONLY BASELINE\n\n46.9% \u2014 the same pipeline without the wording block\n\nWORDS PUSHING THIS MODEL UP\n\nthe, rally, latest, fading\n\nWORDS PUSHING THIS MODEL DOWN\n\nafter, doge, about, are, momentum, holders\n\nEVIDENCE FOR TRUSTING THIS\n\nLive model accuracy 41.2% later dates and 50.2% unseen coins, versus coin-only 51.2% and 55.8%. No demonstrated forecasting edge.",
+          "inference_network_requests": 0,
+          "errors": []
+        },
+        {
+          "width": 375,
+          "forecast": "ESTIMATED CHANCE THE NEXT UTC DAY CLOSES UP\n\n45.4% \u2014 DOWN / FLAT\n\nFORECAST DAY\n\n2026-11-17 00:00 UTC to 2026-11-18 00:00 UTC (end exclusive)\n\nCOIN-ONLY BASELINE\n\n46.9% \u2014 the same pipeline without the wording block\n\nWORDS PUSHING THIS MODEL UP\n\nthe, rally, latest, fading\n\nWORDS PUSHING THIS MODEL DOWN\n\nafter, doge, about, are, momentum, holders\n\nEVIDENCE FOR TRUSTING THIS\n\nLive model accuracy 41.2% later dates and 50.2% unseen coins, versus coin-only 51.2% and 55.8%. No demonstrated forecasting edge.",
+          "inference_network_requests": 0,
+          "errors": []
+        }
+      ],
+      "missing_model_blocks_inference": true
+    },
+    "live_model_retrain": "Exported model, parity fixtures and generated HTML byte-identical after fresh training.",
+    "remaining_submission_requirements": [
+      "Authenticated Google Colab run with fresh input",
+      "Record/upload required <=2-minute demo",
+      "Verify eligibility, team details and official submission confirmation"
+    ]
+  },
+  "verified_at_utc": "2026-11-16T01:23:26.425101+00:00"
 }
