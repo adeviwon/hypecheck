@@ -4,6 +4,8 @@ Record the real Colab notebook, not a mock-up. Open
 https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb
 and press Runtime -> Run all before you start recording, so the outputs are already on screen. Keep the final recording under two minutes and check its actual duration.
 
+For the full neural-sentiment model, run the notebook; its Section 9 input app opens automatically after Run all.
+
 | Time | Show | Suggested narration |
 |---|---|---|
 | 0:00-0:12 | Notebook title | Memecoin traders see confident posts all day. We tested whether that wording actually helps predict the next day's direction. |

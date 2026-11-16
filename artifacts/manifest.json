@@ -30,7 +30,7 @@
     "data/post-features-anon.csv": "2d71dbc5da4cd3efff466ecbbcd117fce4b79735d747f14dfc238ea55d182e29",
     "data/posts.parquet": "81b2f7563a44c1a103e9468a83d52319dfeae0fc616422b4a4df90d8d684b960",
     "data/sentiment.json": "6d0384b26bf2c3b41c6eeb7e9b5973ac7186b85db903c266871e8067624c7415",
-    "docs/report.json": "57b73d0398abaadc6c103479ee85d69d9670a86bd70fc92031915ee5be652c31",
+    "docs/report.json": "0eb8f04fb0f45bf3ea718ae63295252950326886b5467d90106a61c04ca99b32",
     "artifacts/coefficients.json": "b64771e37cc7f2f43c670e8d21fcf53725b7f283fa7b3f603da363a9e1f030de"
   }
 }

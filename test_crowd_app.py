@@ -10,6 +10,12 @@ class CrowdAppTests(unittest.TestCase):
   self.assertAlmostEqual(r["probability_up"],infer(self.artifact["models"]["Model 2"],self.row.to_dict())["probability_up"])
   self.assertEqual(r["data_quality"]["unknown_timestamps"],0);self.assertIn("No demonstrated",c["evidence"].value);self.assertIn("Target UTC",c["forecast"].value)
   c["posts"].value="";c["button"].click();self.assertNotIn("result",state);self.assertIn("blocked",c["error"].value)
+ def test_corrupt_model_clears_previous_forecast(self):
+  artifact=copy.deepcopy(self.artifact);ui,state,c=build_app(artifact)
+  c['format'].value='csv';c['coin'].value=self.row.coin;c['cutoff'].value=self.row.cutoff.isoformat();c['posts'].value=historical_csv(self.row)
+  c['button'].click();self.assertIn('result',state)
+  artifact['models']['Model 2']['intercept']=float('nan');c['button'].click()
+  self.assertNotIn('result',state);self.assertEqual(c['forecast'].value,'');self.assertIn('blocked',c['error'].value)
  def test_public_word_reasons_are_html_escaped(self):
   ui,state,c=build_app(self.artifact);c["format"].value="csv";c["coin"].value=self.row.coin;c["cutoff"].value=self.row.cutoff.isoformat();c["posts"].value=historical_csv(self.row);c["button"].click()
   r=copy.deepcopy(state["result"]);r["toward_up"]=[{"word":"<script>unsafe</script>","logit_contribution":1}]

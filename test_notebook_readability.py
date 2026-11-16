@@ -1,9 +1,10 @@
 """Guard the judge-facing reading path without changing the scientific evaluation."""
 import hashlib
+from io import StringIO
 import json
 from pathlib import Path
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parent
 
@@ -59,6 +60,15 @@ class ReadabilityTests(unittest.TestCase):
         self.assertIn("Our findings, in plain English",text)
         self.assertIn("not the probability",text.lower())
 
+    def test_judges_get_current_input_app_without_editing_code(self):
+        source = '\n'.join(''.join(c['source']) for c in self.nb['cells'] if c['cell_type'] == 'code')
+        self.assertIn('RUN_APP=True #@param', source)
+        self.assertNotIn('RUN_APP=False #@param', source)
+        for name in ['index.html', 'headlines.html', 'predict.html']:
+            page = (ROOT / 'docs' / name).read_text()
+            self.assertIn('https://colab.research.google.com/github/adeviwon/hypecheck/blob/main/HypeCheck.ipynb', page)
+            self.assertIn('Section 9', page)
+
     def test_verified_source_and_support_parity(self):
         import colab_setup
         metadata = self.nb['metadata']['hypecheck']
@@ -68,6 +78,34 @@ class ReadabilityTests(unittest.TestCase):
             self.assertEqual(config["files"][name], digest)
         for name, digest in metadata['bootstrap_sha256'].items():
             self.assertEqual(hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), digest)
+
+    def test_custom_tweet_form_runs_before_training(self):
+        import pandas as pd
+
+        code = [''.join(cell['source']) for cell in self.nb['cells'] if cell['cell_type'] == 'code']
+        form = code[2]
+        self.assertTrue(form.startswith('#@title Check a custom tweet'))
+        pin = json.loads((ROOT / 'crowd-source.json').read_text())['trained_model']
+        payload = (ROOT / pin['path']).read_bytes()
+        self.assertEqual(hashlib.sha256(payload).hexdigest(), pin['sha256'])
+        fetch = Mock(return_value=payload)
+        score = Mock()
+        namespace = {'pd': pd, 'json': json, 'verified_bytes': fetch, 'batch_check': score,
+                     'display': Mock(), 'HTML': str}
+        with patch('builtins.print'):
+            exec(form, namespace)
+        fetch.assert_not_called()
+        score.assert_not_called()
+
+        with patch('crowd_app.panels', return_value=('sentiment', 'forecast', 'evidence')):
+            for tweet in ['DOGE discussion\n\ncontinuation', 'Another tweet about DOGE']:
+                exec(form.replace('tweet_text = ""', f'tweet_text = {tweet!r}', 1), namespace)
+                text, coin = score.call_args.args
+                self.assertEqual(pd.read_csv(StringIO(text))['text'].tolist(), [tweet])
+                self.assertEqual(coin, 'DOGE')
+                self.assertEqual(score.call_args.kwargs['input_format'], 'csv')
+        fetch.assert_called_once_with(pin['path'], pin['revision'], pin['sha256'])
+        self.assertEqual(namespace['display'].call_count, 6)
 
     def test_rich_table_escapes_source_text(self):
         import pandas as pd

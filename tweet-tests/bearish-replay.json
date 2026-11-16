@@ -22,7 +22,7 @@
       "data/features.csv": "7b851f6d9c383a8a9a19d88648613e7a044f2f23ae55c870e6b06ca9296d20f5",
       "data/sentiment.json": "6d0384b26bf2c3b41c6eeb7e9b5973ac7186b85db903c266871e8067624c7415",
       "artifacts/coefficients.json": "b64771e37cc7f2f43c670e8d21fcf53725b7f283fa7b3f603da363a9e1f030de",
-      "docs/report.json": "57b73d0398abaadc6c103479ee85d69d9670a86bd70fc92031915ee5be652c31"
+      "docs/report.json": "0eb8f04fb0f45bf3ea718ae63295252950326886b5467d90106a61c04ca99b32"
     },
     "protocol": "Seeded sample of existing held-out coin-days with explicit ticker and cached bearish probability >=0.5; one random post per selected coin-day. Fresh sentiment inference, frozen JSON coefficient prediction. No retraining or outcome-based selection.",
     "target": "Next UTC day's open-to-close, not 24 hours after the tweet.",
