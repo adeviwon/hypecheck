@@ -16,7 +16,7 @@ class HTTPTests(unittest.TestCase):
     self.assertEqual(r.status,200);self.assertNotIn('unsafe-inline',r.headers['Content-Security-Policy'])
     self.assertTrue(r.read())
  def test_no_inline_script_or_style(self):
-  s=(Path(__file__).resolve().parent/'docs/headlines.html').read_text()
+  s=(Path(__file__).resolve().parents[1]/'docs/headlines.html').read_text()
   self.assertNotIn('<style>',s);self.assertNotIn('<script>',s)
   self.assertIn('src="headlines.js"',s);self.assertIn('href="headlines.css"',s)
  def test_private_paths_stay_inaccessible(self):

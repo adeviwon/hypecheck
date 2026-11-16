@@ -1,7 +1,7 @@
 import copy,json,unittest
 from pathlib import Path
 from judge_tables import *
-ROOT=Path(__file__).resolve().parent
+ROOT=Path(__file__).resolve().parents[1]
 class JudgeTableTests(unittest.TestCase):
  @classmethod
  def setUpClass(cls):cls.r=json.loads((ROOT/"docs/crowd-report.json").read_text())

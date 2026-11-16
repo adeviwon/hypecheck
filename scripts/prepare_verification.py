@@ -5,7 +5,7 @@ from pathlib import Path
 import pipeline as core
 from colab_setup import FILE_DIGESTS
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def prepare():

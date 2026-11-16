@@ -1,5 +1,5 @@
 """Execute project notebooks locally; capture real outputs, fail on shell errors.
-Usage: python run_nb_capture.py notebook.ipynb empty-workdir
+Usage: python scripts/run_nb_capture.py notebook.ipynb empty-workdir
 Not a substitute for a live Google Colab test.
 """
 import ast, contextlib, io, json, os, shlex, subprocess, sys, time, traceback

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import pandas as pd
-import prepare_verification as setup
+from scripts import prepare_verification as setup
 
 
 class PreparationTests(unittest.TestCase):

@@ -6,7 +6,7 @@ from pathlib import Path
 import unittest
 from unittest.mock import Mock, patch
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class ReadabilityTests(unittest.TestCase):

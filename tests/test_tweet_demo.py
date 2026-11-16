@@ -5,7 +5,7 @@ from pathlib import Path
 
 import tweet_demo as td
 
-ARTIFACT = json.loads((Path(__file__).resolve().parent / "artifacts" / "crowd-model.json").read_text())
+ARTIFACT = json.loads((Path(__file__).resolve().parents[1] / "artifacts" / "crowd-model.json").read_text())
 COINS = ARTIFACT["report"]["base_coins"] + ARTIFACT["report"]["excluded_training_coins"]
 
 

@@ -1,4 +1,4 @@
-"""Small runnable gates: .venv/bin/python -m unittest -v test_pipeline.py."""
+"""Small runnable gates: .venv/bin/python -m unittest discover -s tests -p test_pipeline.py -v."""
 import json
 import tempfile
 import unittest

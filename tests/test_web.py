@@ -11,7 +11,7 @@ from http.server import ThreadingHTTPServer
 
 from serve import Handler
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class WebChecks(unittest.TestCase):

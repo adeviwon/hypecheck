@@ -6,7 +6,7 @@ import pandas as pd
 import pipeline as core
 from headline_study import previous_day
 from expanded_inputs import load,split_data
-ROOT=Path(__file__).resolve().parent
+ROOT=Path(__file__).resolve().parents[1]
 class ArtifactTests(unittest.TestCase):
  @classmethod
  def setUpClass(cls):
